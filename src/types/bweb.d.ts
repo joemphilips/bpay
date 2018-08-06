@@ -1,27 +1,68 @@
-/**
- * If you import a dependency which does not include its own type definitions,
- * TypeScript will try to find a definition for it by following the `typeRoots`
- * compiler option in tsconfig.json. For this project, we've configured it to
- * fall back to this folder if nothing is found in node_modules/@types.
- *
- * Often, you can install the DefinitelyTyped
- * (https://github.com/DefinitelyTyped/DefinitelyTyped) type definition for the
- * dependency in question. However, if no one has yet contributed definitions
- * for the package, you may want to declare your own. (If you're using the
- * `noImplicitAny` compiler options, you'll be required to declare it.)
- *
- * This is an example type definition for the `sha.js` package, used in hash.ts.
- *
- * (This definition was primarily extracted from:
- * https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/node/v8/index.d.ts
- */
+// Type definitions for bweb 0.1.3
+// Project: https://github.com/bcoin-org/bweb
+// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 
 // tslint:disable:no-method-signature
 
 declare module 'bweb' {
-  export class Server {
+  import http from 'http';
+  import https from 'https';
+  import bsock from 'bsock';
+  export abstract class Server {
+    public http: http.Server | https.Server;
+    public io: bsock.Server;
+    public rpc: RPC;
+    public routes: Router;
+    constructor(options?: ServerOptions);
     get(path: string, cb: any);
     post(path: string, cb: any);
     put(path: string, cb: any);
+    on();
+    /**
+     * Optional Abstract Method, it needs to be implemented only when
+     * you want to handle a websocket.
+     * @param socket
+     */
+    handleSocket(socket: bsock.Socket): void;
+    /**
+     * Optional Abstract Method. It needs to be implmented only when
+     * you want to handle a websocket
+     */
+    handleCall(): void;
+    open(): Promise<void>;
+    close(): Promise<void>;
+    /**
+     * setup onError handler
+     */
+    error(handler: Function): void;
+  }
+  export type ServerOptions = Partial<{
+    host: string;
+    port: number;
+    ssl: boolean;
+    keyFile: string;
+    certFile: string;
+    key: string;
+    cert: string;
+    ca: Array<any>;
+    sockets: boolean;
+  }>;
+
+  export function createServer(options?: ServerOptions): Server;
+  export function server(options?: ServerOptions): Server;
+  export class Router {}
+  export function router(): Router;
+  export class RPC {}
+  export function rpc(): RPC;
+  export class RPCError {}
+  export function errors() {}
+  export interface middleware {
+    basicAuth: any;
+    bodyParser: any;
+    cookieParser: any;
+    cors: any;
+    fileServer: any;
+    jsonRPC: any;
+    router: any;
   }
 }

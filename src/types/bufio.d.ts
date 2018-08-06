@@ -1,3 +1,7 @@
+// Type definitions for bufio 1.0.1
+// Project: https://github.com/bcoin-org/bufio
+// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
+
 declare module 'bufio' {
   export class BufferReader {
     constructor(data: Buffer, zeroCopy?: boolean);

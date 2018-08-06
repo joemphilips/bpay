@@ -1,3 +1,7 @@
+// Type definitions for bdb 0.2.3
+// Project: https://github.com/bcoin-org/bdb
+// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
+
 declare module 'bdb' {
   export type KeyType = string | Buffer;
   export class Iterator {

@@ -14,6 +14,8 @@ export class Plugin extends EventEmitter {
     this.invoicedb = new InvoiceDB();
     this.http = new HTTP({ invoicedb: this.invoicedb });
   }
-  public async open() {}
+  public async open() {
+    await this.http.open();
+  }
   public async close() {}
 }

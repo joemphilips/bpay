@@ -1,5 +1,5 @@
 declare module 'blgr' {
-  export class Logger {
+  export default class Logger {
     levels: {
       NONE: 0;
       ERROR: 1;
