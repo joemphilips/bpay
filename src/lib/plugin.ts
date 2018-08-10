@@ -18,9 +18,11 @@ export class Plugin extends EventEmitter {
     super();
     this.invoicedb = new InvoiceDB();
     this.logger = new Logger().context(Plugin.id);
-    this.logger.setLevel('debug');
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.setLevel('debug');
+    }
     this.logger.open();
-    this.http = new HTTP({ invoicedb: this.invoicedb, log: this.logger });
+    this.http = new HTTP({ invoicedb: this.invoicedb, logger: this.logger });
     this.logger.debug('bpay plugin initialized!');
   }
 
