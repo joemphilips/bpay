@@ -1,4 +1,5 @@
 import { Node } from 'bcoin';
+import Logger from 'blgr';
 import { EventEmitter } from 'events';
 import { HTTP } from './http';
 import { InvoiceDB } from './invoicedb';
@@ -10,12 +11,17 @@ export class Plugin extends EventEmitter {
     return new Plugin(node);
   }
 
+  public logger: Logger;
   public http;
   public invoicedb;
   constructor(public node: Node) {
     super();
     this.invoicedb = new InvoiceDB();
-    this.http = new HTTP({ invoicedb: this.invoicedb });
+    this.logger = new Logger().context(Plugin.id);
+    this.logger.setLevel('debug');
+    this.logger.open();
+    this.http = new HTTP({ invoicedb: this.invoicedb, log: this.logger });
+    this.logger.debug('bpay plugin initialized!');
   }
 
   public async open() {
@@ -23,6 +29,7 @@ export class Plugin extends EventEmitter {
       this.http.attach(Plugin.subpath, this.http);
     }
     await this.http.open();
+    this.logger.debug('bpay plugin opened!');
   }
   public async close() {
     await this.invoicedb.close();

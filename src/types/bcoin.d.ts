@@ -144,7 +144,7 @@ declare module 'bcoin' {
       /**
        * Call this in the last line of `close()`
        */
-      public handleLose(): Promise<void>;
+      public handleClose(): Promise<void>;
       use(plugin: BcoinPlugin): void;
       has(name: string): boolean;
       get(name: string): BcoinPluginInstance | null;

@@ -5,10 +5,10 @@ import { setRoute } from './routes';
 
 export class HTTP extends Server {
   public invoicedb;
-  private log: Logger;
+  private logger: Logger;
   constructor(options) {
     super();
-    this.log = new Logger(options.loglevel);
+    this.logger = options.logger || new Logger(options.loglevel);
     this.invoicedb = options.invoicedb;
     this.init();
   }
@@ -19,7 +19,7 @@ export class HTTP extends Server {
 
   private init() {
     this.on('request', (req, res) => {
-      this.log.debug(
+      this.logger.debug(
         'Request for method=%s path=%s (%s).',
         req.method,
         req.pathname,
@@ -28,7 +28,7 @@ export class HTTP extends Server {
     });
 
     this.on('listening', address => {
-      this.log.info(
+      this.logger.info(
         'bpay HTTP server listening on %s (port=%d).',
         address.address,
         address.port
@@ -37,7 +37,6 @@ export class HTTP extends Server {
 
     this.use(this.router());
     this.use(this.bodyParser());
-    this.use('/app', this.fileServer(path.join(__dirname, './frontend')));
     this.initRouter();
     // this.initSockets();
     this.initApp();
@@ -45,12 +44,12 @@ export class HTTP extends Server {
 
   private initRouter() {
     // setRoute(this);
-    this.log.warning('not implemented');
+    this.logger.warning('not implemented');
   }
 
   // private initSockets() {}
   private initApp() {
     const appDir = './frontend';
-    this.use('$/^', this.fileServer(appDir));
+    this.use('$/^', this.fileServer(path.join(__dirname, appDir)));
   }
 }

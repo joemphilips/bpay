@@ -19,6 +19,8 @@ node.use(Plugin);
 (async () => {
   await node.ensure();
   await node.open();
+  await node.connect();
+  await node.startSync();
 })().catch(err => {
   // tslint:disable-next-line no-console
   console.error(err.stack);
