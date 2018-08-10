@@ -5,9 +5,15 @@
 declare module 'bcoin' {
   import { EventEmitter } from 'events';
   import Logger from 'blgr';
-  import bweb from 'bweb';
-  import bdb, { Batch } from 'bdb';
-  import bmutex from 'bmutex';
+  import * as bweb from 'bweb';
+  import { DB, Batch } from 'bdb';
+  import { Lock } from 'bmutex';
+  import Config, { ConfigOption } from 'bcfg';
+  export interface BcoinPlugin {
+    init(): BcoinPlugin;
+    open(): Promise<void>;
+    close(): Promise<void>;
+  }
   /**
    * Fee rate per kilobyte/satoshi.
    */
@@ -97,19 +103,63 @@ declare module 'bcoin' {
   export type Pool = net.Pool;
 
   export namespace node {
-    export abstract class Node {
+    export class Node extends EventEmitter {
+      network: NetworkType;
+      /**
+       * if use memorydb or not. default to true.
+       */
+      memory: boolean;
+      starttime: number;
+      stack: Array<any>;
+      spv: boolean;
+      chain?: blockchain.Chain;
+      fees?: Fees;
+      mempool?: Mempool;
+      pool?: Pool;
+      miner?: Miner;
+      plugins?: Array<BcoinPlugin>;
+      logger?: Logger;
+      workers: WorkerPool;
       http?: bweb.Server;
-    }
-    export class FullNode implements Node {}
+      constructor(
+        module: string,
+        config?: Config,
+        file?: string,
+        options?: ConfigOption
+      );
+      location(name: string): string;
+      /**
+       * Call this in the first line of `open()`
+       */
+      public handlePreOpen(): Promise<void>;
+      /**
+       * Call this in the last line of `open()`
+       */
+      public handleOpen(): Promise<void>;
 
-    export class SPVNode implements Node {}
+      /**
+       * Call this in the last line of `close()`
+       */
+      public handleLose(): Promise<void>;
+      use(plugin: BcoinPlugin): void;
+      has(name: string): boolean;
+      get(name: string): BcoinPlugin;
+    }
+    export class FullNode extends Node {
+      constructor(options: ConfigOption);
+      [key: string]: any;
+    }
+
+    export class SPVNode {}
   }
 
-  export type Node = node.Node;
+  export class Node extends node.Node {}
 
-  export type FullNode = node.FullNode;
+  export class FullNode extends node.FullNode {
+    constructor(options: ConfigOption);
+  }
 
-  export type SPVNode = node.SPVNode;
+  export class SPVNode extends node.SPVNode {}
 
   export namespace primitives {
     export class Address {}
@@ -224,7 +274,7 @@ declare module 'bcoin' {
     type Base58String = string;
     export class Wallet extends EventEmitter {
       public wdb: WalletDB;
-      public db: bdb.DB;
+      public db: DB;
       public network: Network;
       public logger: Logger;
       public wid: WID;
@@ -238,8 +288,8 @@ declare module 'bcoin' {
        */
       public master: MasterKey;
       public txdb: TXDB;
-      private writeLock: bmutex.Lock;
-      private fundLock: bmutex.Lock;
+      private writeLock: Lock;
+      private fundLock: Lock;
       static fromOptions(
         wdb: WalletDB,
         options?: Partial<WalletOptions>

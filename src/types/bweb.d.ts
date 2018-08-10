@@ -6,10 +6,10 @@
 
 declare module 'bweb' {
   import { EventEmitter } from 'events';
-  import bcoin from 'bcoin';
-  import http from 'http';
-  import https from 'https';
-  import bsock from 'bsock';
+  import { Wallet } from 'bcoin';
+  import * as http from 'http';
+  import * as https from 'https';
+  import { Socket, Server as BsockServer } from 'bsock';
 
   export class Response extends EventEmitter {
     constructor(req, res);
@@ -44,13 +44,13 @@ declare module 'bweb' {
     public username: string | null;
     public query: object;
     public params: object;
-    public body: object;
+    public body: object; // when use json middleware
     public cookies: object;
     public hasBody: boolean;
     public readable: boolean;
     public writable: boolean;
     public admin: boolean;
-    public wallet: null | bcoin.Wallet;
+    public wallet: null | Wallet;
     constructor(req, res, url);
     public parse(url: string): void;
     public navigate(url: string): void;
@@ -112,7 +112,7 @@ declare module 'bweb' {
     | 'zip';
   export abstract class Server extends EventEmitter {
     public http: http.Server | https.Server;
-    public io: bsock.Server;
+    public io: BsockServer;
     public rpc: RPC;
     public routes: Router;
     public mounted: boolean;
@@ -126,7 +126,7 @@ declare module 'bweb' {
      * you want to handle a websocket.
      * @param socket
      */
-    handleSocket(socket: bsock.Socket): void;
+    handleSocket(socket: Socket): void;
     /**
      * Optional Abstract Method. It needs to be implmented only when
      * you want to handle a websocket
@@ -159,17 +159,23 @@ declare module 'bweb' {
      */
     public channel(name: string): any;
     public join(socket: object, name: string): any;
+    /**
+     * leave a channel
+     * @param socket
+     * @param name
+     */
     public leave(socket: object, name: string): any;
     /**
      * emit event to channel
+     * @param name - channel name
      * @param args
      */
-    public to(...args: any[]): any;
+    public to(name: string, ...args: any[]): void;
     /**
      * emit event to all sockets
      * @param args
      */
-    public all(...args: any[]): any;
+    public all(...args: any[]): void;
 
     /**
      * execute rpc call
@@ -191,11 +197,22 @@ declare module 'bweb' {
     router(routes?: Router): RequestHandler;
     cors(): RequestHandler;
     basicAuth(): RequestHandler;
-    bodyParser(options): RequestHandler;
+    bodyParser(options?: BodyParserOptions): RequestHandler;
     jsonRPC(rpc: object): RequestHandler;
+    /**
+     * static file middleware
+     * @param prefix
+     */
     fileServer(prefix): RequestHandler;
     cookieParser(): RequestHandler;
   }
+
+  export type BodyParserOptions = Partial<{
+    keyLimit: number;
+    bodyLimit: number;
+    type: null | string;
+    timeout: number;
+  }>;
 
   export type ServerOptions = Partial<{
     host: string;
