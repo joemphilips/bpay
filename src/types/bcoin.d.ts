@@ -10,10 +10,14 @@ declare module 'bcoin' {
   import { Lock } from 'bmutex';
   import Config, { ConfigOption } from 'bcfg';
   export interface BcoinPlugin {
-    init(): BcoinPlugin;
+    init(node: Node): BcoinPluginInstance;
+  }
+
+  export interface BcoinPluginInstance {
     open(): Promise<void>;
     close(): Promise<void>;
   }
+
   /**
    * Fee rate per kilobyte/satoshi.
    */
@@ -117,7 +121,7 @@ declare module 'bcoin' {
       mempool?: Mempool;
       pool?: Pool;
       miner?: Miner;
-      plugins?: Array<BcoinPlugin>;
+      plugins?: Array<BcoinPluginInstance>;
       logger?: Logger;
       workers: WorkerPool;
       http?: bweb.Server;
@@ -143,7 +147,7 @@ declare module 'bcoin' {
       public handleLose(): Promise<void>;
       use(plugin: BcoinPlugin): void;
       has(name: string): boolean;
-      get(name: string): BcoinPlugin;
+      get(name: string): BcoinPluginInstance | null;
     }
     export class FullNode extends Node {
       constructor(options: ConfigOption);

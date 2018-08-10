@@ -1,3 +1,4 @@
+import { Plugin } from '../lib/plugin';
 import { FullNodeN as FullNode } from './fullnode';
 
 const node = new FullNode({
@@ -10,10 +11,10 @@ const node = new FullNode({
   logFile: true,
   logLevel: 'debug',
   memory: false,
-  workers: true,
-
-  plugins: [require('../lib/plugin')]
+  workers: true
 });
+
+node.use(Plugin);
 
 (async () => {
   await node.ensure();

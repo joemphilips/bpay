@@ -4,9 +4,8 @@ import * as path from 'path';
 import { setRoute } from './routes';
 
 export class HTTP extends Server {
-  public app;
   public invoicedb;
-  private log;
+  private log: Logger;
   constructor(options) {
     super();
     this.log = new Logger(options.loglevel);
@@ -46,7 +45,7 @@ export class HTTP extends Server {
 
   private initRouter() {
     // setRoute(this);
-    this.log.warn('not implemented');
+    this.log.warning('not implemented');
   }
 
   // private initSockets() {}
