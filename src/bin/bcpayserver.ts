@@ -1,6 +1,6 @@
-import { Node } from 'bcoin'
+import { FullNodeN as FullNode } from './fullnode';
 
-const node = new Node({
+const node = new FullNode({
   argv: true,
   config: true,
   env: true,
@@ -13,13 +13,12 @@ const node = new Node({
   workers: true,
 
   plugins: [require('../lib/plugin')]
-})
-
+});
 
 (async () => {
   await node.ensure();
   await node.open();
-})().catch((err) => {
+})().catch(err => {
   // tslint:disable-next-line no-console
   console.error(err.stack);
   process.exit(1);

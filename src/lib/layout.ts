@@ -1,5 +1,11 @@
-import bdb from 'bdb';
+import { key } from 'bdb';
 
+// tslint:disable object-literal-sort-keys
 export const invoicedb = {
-  V: bdb.key('V')
+  prefix: key('t', ['uint32']),
+  V: key('V')
+};
+
+export const tokendb = {
+  V: key('V')
 };

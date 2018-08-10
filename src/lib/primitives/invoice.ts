@@ -1,5 +1,5 @@
 import bsert from 'bsert';
-import { Struct } from 'bufio';
+// import { Struct } from 'bufio';
 
 export type BaseState =
   | 'new'
@@ -15,7 +15,7 @@ export type InvoiceOption = Partial<Invoice> &
   Pick<Invoice, 'id' | 'token' | 'price'>;
 
 // tslint:disable:member-access
-export class Invoice extends Struct {
+export class Invoice /*extends Struct*/ {
   static fromOptions(options) {
     return new this(options);
   }
@@ -46,7 +46,7 @@ export class Invoice extends Struct {
   redirectURL: string;
   posData: string;
   constructor({ token, id, price, ...options }: InvoiceOption) {
-    super();
+    // super();
     this.token = token;
     this.id = id;
     this.price = price;
@@ -73,5 +73,7 @@ export class Invoice extends Struct {
       token: this.token
     };
   }
-  public fromString() {}
+  public fromString(data: string) {
+    return '';
+  }
 }
