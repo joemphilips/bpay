@@ -1,10 +1,14 @@
 declare module 'bcfg' {
   export default class Config {
+    /**
+     * module name (e.g. `bcoin`, `bpanel`)
+     */
     public module: string;
     /**
-     * datadir for putting things in.
+     * data dir for putting things in.
+     * defaults to `$HOME/.{module}`
      */
-    public prefix?: string;
+    public prefix: string;
     public suffix?: string;
     public fallback?: string;
     public alias?: object;

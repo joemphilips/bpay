@@ -1,3 +1,3 @@
-# bcpayserver
+# bpay
 
-btcpayserver as bcoin plugin
+btcpayserver as a bcoin plugin
