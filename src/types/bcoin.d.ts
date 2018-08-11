@@ -3,6 +3,9 @@
 // Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 
 declare module 'bcoin' {
+  import { BufferWriter, BufferReader } from 'bufio';
+  import BN from 'bn.js';
+
   import { EventEmitter } from 'events';
   import Logger from 'blgr';
   import * as bweb from 'bweb';
@@ -175,7 +178,39 @@ declare module 'bcoin' {
 
     export class Coin {}
 
-    export class Headers {}
+    export class Headers extends AbstractBlock {
+      constructor(options: BlockHeaderOpts);
+      verifyBody(): true;
+      getSize(): 81;
+    }
+
+    interface BlockHeaderOpts {
+      version: number;
+      prevBlock: Buffer;
+      merkleRoot: Buffer;
+      time: number;
+      bits: number;
+      nonce: number;
+      mutable?: boolean;
+    }
+    export abstract class AbstractBlock {
+      private parseOptions(options: BlockHeaderOpts): any;
+      private parseJson(options: BlockHeaderOpts): any;
+      public isMemory(): boolean;
+      /**
+       * Serialize Block headers.
+       */
+      public toHead();
+      private fromHead(data: Buffer): any;
+      public writeHead(bw: BufferWriter): any;
+      public readHead(br: BufferReader): any;
+      public verify(): boolean;
+      public verifyPOW(): boolean;
+      abstract verifyBody(): boolean;
+      public rhash(): Buffer;
+      public toInv(): InvItem;
+      Buffer;
+    }
 
     export class Input {}
 
@@ -226,7 +261,156 @@ declare module 'bcoin' {
 
   export namespace protocol {
     export interface consensus {}
-    export class Network {}
+    export class Network {
+      type: NetworkType;
+      /**
+       * url for seed node
+       */
+      seeds: string;
+      magic: number;
+      port: number;
+      checkPointMap: { [key: string]: string };
+      lastCheckpoint: number;
+      halvingInterval: number;
+      genesis: primitives.BlockHeaderOpts & { hash: string };
+      genesisBlock: string;
+      pow: POW;
+      block: BlockConstants;
+      /**
+       * Map of historical blocks which create duplicate tx hashes.
+       */
+      bip30: { [key: string]: string };
+      activationThreshold: number;
+      minerWindow: number;
+      deployments: DeployMents;
+      deploys: Deploy[];
+      unknownBits: number;
+      keyPrefix: KeyPrefix;
+      addressPrefix: AddressPrefix;
+      /**
+       * default value for whether the mempool
+       * accepts non-standard tx.
+       */
+      requireStandard: boolean;
+      walletPort: number;
+      minRelay: number;
+      feeRate: number;
+      maxFeeRate: number;
+      selfConnect: boolean;
+      requestMempool: boolean;
+      public checkpoints: { hash: string; height: number }[];
+      constructor(options: Partial<NetworkOptions>);
+      static get(type: NetworkType): Network;
+    }
+
+    export interface NetworkOptions {
+      type: NetworkType;
+      /**
+       * url for seed node
+       */
+      seeds: string;
+      magic: number;
+      port: number;
+      checkPointMap: { [key: string]: string };
+      lastCheckpoint: number;
+      halvingInterval: number;
+      genesis: primitives.BlockHeaderOpts & { hash: string };
+      genesisBlock: string;
+      pow: POW;
+      block: BlockConstants;
+      /**
+       * Map of historical blocks which create duplicate tx hashes.
+       */
+      bip30: { [key: string]: string };
+      activationThreshold: number;
+      minerWindow: number;
+      deployments: DeployMents;
+      deploys: Deploy[];
+      unknownBits: number;
+      keyPrefix: KeyPrefix;
+      addressPrefix: AddressPrefix;
+      /**
+       * default value for whether the mempool
+       * accepts non-standard tx.
+       */
+      requireStandard: boolean;
+      walletPort: number;
+      minRelay: number;
+      feeRate: number;
+      maxFeeRate: number;
+      selfConnect: boolean;
+      requestMempool: boolean;
+    }
+
+    interface AddressPrefix {
+      pubkeyhash: number;
+      scripthash: number;
+      witnesspubkeyhash: number;
+      witnessscripthash: number;
+      bech32: string;
+    }
+
+    interface KeyPrefix {
+      privkey: number;
+      xpubkey: number;
+      xpubkey58: string;
+      xprivkey58: string;
+      coinType: number;
+    }
+
+    interface DeployMents {
+      [key: string]: Deploy;
+    }
+
+    interface Deploy {
+      name: 'csv';
+      bit: number;
+      startTime: number;
+      timeout: number;
+      threshold: number;
+      window: number;
+      required: boolean;
+      force: boolean;
+    }
+    /**
+     * Constants of blockchain itself.
+     * It differs among network parameters.
+     */
+    interface BlockConstants {
+      bip34height: number;
+      bip34hash: string;
+      bip65height: number;
+      bip65hash: string;
+      bip66height: number;
+      bip66hash: string;
+      /**
+       * Safe height to start pruning
+       */
+      pruneAfterHeight: number;
+      /**
+       * safe number to
+       */
+      keepBlocks: number;
+      /**
+       * Used for the time delta to determine whether the chain is synced
+       */
+      maxTipAge: number;
+      /**
+       * Height at which block processing is slow enough that we can output
+       * logs without spamming
+       */
+      slowHeight: number;
+    }
+    interface POW {
+      limit: BN;
+      bits: number; // compact pow limit.
+      chainwork: BN;
+      targetTimespan;
+      targetSpacing: number;
+      retargetInterval: number;
+      targetRest: boolean;
+      noRetargeting: boolean;
+    }
 
     export interface networks {
       type: NetworkType;
@@ -235,10 +419,11 @@ declare module 'bcoin' {
     export interface policy {}
   }
 
+  export class Network extends protocol.Network {}
+
   export type NetworkType = 'main' | 'testnet' | 'regtest' | 'simnet';
 
   export type consensus = protocol.consensus;
-  export type Network = protocol.Network;
   export type networks = protocol.networks;
   export type policy = protocol.policy;
   export namespace script {
