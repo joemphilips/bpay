@@ -6,6 +6,7 @@ declare module 'bcoin' {
   import { EventEmitter } from 'events';
   import Logger from 'blgr';
   import * as bweb from 'bweb';
+  import * as bclient from 'bclient';
   import { DB, Batch } from 'bdb';
   import { Lock } from 'bmutex';
   import Config, { ConfigOption } from 'bcfg';
@@ -110,7 +111,7 @@ declare module 'bcoin' {
     export class Node extends EventEmitter {
       network: NetworkType;
       /**
-       * if use memorydb or not. default to true.
+       * if use memory db or not. default to true.
        */
       memory: boolean;
       starttime: number;
@@ -131,6 +132,9 @@ declare module 'bcoin' {
         file?: string,
         options?: ConfigOption
       );
+
+      ensure(): Promise<void>;
+
       location(name: string): string;
       /**
        * Call this in the first line of `open()`
@@ -425,7 +429,7 @@ declare module 'bcoin' {
       public createNested(acct?: string | number): Promise<WalletKey>;
 
       /**
-       * create a new address (incremetns depth)
+       * create a new address (increments depth)
        * @param acct
        * @param branch
        */
@@ -478,11 +482,11 @@ declare module 'bcoin' {
        * - This wallet is not watchOnly.
        * - It has been imported already.
        * @param acct
-       * @param adddress
+       * @param address
        */
       public importAddress(
         acct: string | number,
-        adddress: Address
+        address: Address
       ): Promise<void>;
 
       public fund(mtx: MTX, options?: FundOptions, force?: boolean);
@@ -574,7 +578,7 @@ declare module 'bcoin' {
         lookahead: number
       ): Promise<void>;
 
-      /** Sync address depths based on a transaciton's outputs */
+      /** Sync address depths based on a transaction's outputs */
       private syncOutputDepth(tx: primitives.TX): Promise<WalletKey[]>;
 
       /**
@@ -593,7 +597,7 @@ declare module 'bcoin' {
 
       public toDetails(wtx: TXRecord): Promise<Details>;
       /**
-       * retrive tx from txdb before calling `toDetails`
+       * retrieve tx from txdb before calling `toDetails`
        * @param hash
        */
       public getDetails(hash: Buffer): Promise<Details>;
@@ -649,7 +653,7 @@ declare module 'bcoin' {
       public getHistory(acct?: string | number): Promise<TX>;
 
       /**
-       * get all available coins
+       * get all coins
        * @param acct
        */
       public getCoins(acct?: string | number): Promise<Coin[]>;
@@ -763,7 +767,7 @@ declare module 'bcoin' {
        */
       hardFee: Amount;
       /**
-       * Wheter to subtract the fee from existing outputs rather than adding more inputs.
+       * Whether to subtract the fee from existing outputs rather than adding more inputs.
        */
       subtractFee: number | boolean;
     }
@@ -784,6 +788,32 @@ declare module 'bcoin' {
       token: Buffer;
       tokenDepth: number;
     }
+
+    /**
+     * defined as `WalletNode` internally.
+     */
+    export class Node extends node.Node {
+      public opened: boolean;
+      public client: Client;
+      public wdb: WalletDB;
+      public rpc: RPC;
+      public http: HTTP;
+      constructor(options?: ConfigOption);
+      public open(): Promise<void>;
+      public close(): Promise<void>;
+    }
+
+    export class RPC {}
+
+    export class HTTP extends bweb.Server {}
+
+    /**
+     * defined as `WalletClient` internally.
+     * client for wallet to communicate with the node
+     */
+    export class Client extends bclient.NodeClient {}
+
+    export class NodeClient {}
     export class TXDB {}
     export class MasterKey {}
     export class Account {

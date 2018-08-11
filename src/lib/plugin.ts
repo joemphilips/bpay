@@ -16,19 +16,19 @@ export class Plugin extends EventEmitter {
   public invoicedb;
   constructor(public node: Node) {
     super();
-    this.invoicedb = new InvoiceDB();
     this.logger = new Logger().context(Plugin.id);
     if (process.env.NODE_ENV === 'development') {
       this.logger.setLevel('debug');
     }
     this.logger.open();
+    this.invoicedb = new InvoiceDB({ logger: this.logger });
     this.http = new HTTP({ invoicedb: this.invoicedb, logger: this.logger });
     this.logger.debug('bpay plugin initialized!');
   }
 
   public async open() {
     if (this.node.http) {
-      this.http.attach(Plugin.subpath, this.http);
+      this.node.http.attach(Plugin.subpath, this.http);
     }
     await this.http.open();
     this.logger.debug('bpay plugin opened!');

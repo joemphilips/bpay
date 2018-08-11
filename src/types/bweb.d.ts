@@ -120,7 +120,7 @@ declare module 'bweb' {
     public mounts: Array<Hook>;
     private stack: Array<Hook>;
     constructor(options?: ServerOptions);
-    on(tyep: string, handler: Function);
+    on(type: string, handler: Function);
     /**
      * Optional Abstract Method, it needs to be implemented only when
      * you want to handle a websocket.
@@ -128,7 +128,7 @@ declare module 'bweb' {
      */
     handleSocket(socket: Socket): void;
     /**
-     * Optional Abstract Method. It needs to be implmented only when
+     * Optional Abstract Method. It needs to be implemented only when
      * you want to handle a websocket
      */
     handleCall(): void;
@@ -139,7 +139,19 @@ declare module 'bweb' {
      */
     error(handler: Function): void;
 
+    /**
+     *
+     * @param path
+     * @param server - parent server to mount. push `Hook (path, server)` to `this.mounts`
+     */
     private mount(path: string, server: Server): void;
+    /**
+     * attach server to this.
+     * 1. bind `"error"` `"connection"` , and `"error"` events to this.
+     * 2.
+     * @param path - subpath to be attached
+     * @param server - Child server to attach
+     */
     public attach(path: string, server: Server): void;
     public use(path: string, handler: RequestHandler): void;
     public use(handler: RequestHandler): void;

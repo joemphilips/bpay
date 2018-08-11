@@ -1,7 +1,7 @@
 import { ConfigOption } from 'bcfg';
-import { FullNode } from 'bcoin';
+import { wallet } from 'bcoin';
 
-export class FullNodeN extends FullNode {
+export class BPayWalletNode extends wallet.Node {
   constructor(options: ConfigOption) {
     super(options);
   }

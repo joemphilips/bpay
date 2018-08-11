@@ -55,7 +55,7 @@ declare module 'bufio' {
     readDoubleBE(): number;
     readVarint(): number;
     readVarint2(): number;
-    readBytes(size: number, zecoCopy?: boolean): Buffer;
+    readBytes(size: number, zeroCopy?: boolean): Buffer;
     readVarBytes(zeroCopy?: boolean): Buffer;
     /**
      * Slice N bytes and create a child reader
@@ -82,7 +82,7 @@ declare module 'bufio' {
   export class BufferWriter {
     constructor(data: Buffer, zeroCopy?: boolean);
     static pool(size: number);
-    /** allocate and rener the final buffer */
+    /** allocate and render the final buffer */
     render(): Buffer;
     getSize(): number;
     seek(offset): BufferWriter;
@@ -135,7 +135,7 @@ declare module 'bufio' {
   export class StaticWriter {
     constructor(options: Buffer | number);
     static pool(size: number);
-    /** allocate and rener the final buffer */
+    /** allocate and render the final buffer */
     render(): Buffer;
     slice(): Buffer;
     getSize(): number;
