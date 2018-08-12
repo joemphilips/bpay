@@ -111,6 +111,8 @@ declare module 'bweb' {
     | 'xslt'
     | 'zip';
   export abstract class Server extends EventEmitter {
+    public options: { [key: string]: any };
+    public config: ServerOptions;
     public http: http.Server | https.Server;
     public io: BsockServer;
     public rpc: RPC;

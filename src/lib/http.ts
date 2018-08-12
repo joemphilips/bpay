@@ -1,14 +1,25 @@
+import { wallet, Network } from 'bcoin';
 import Logger from 'blgr';
 import { Server } from 'bweb';
 import * as path from 'path';
 import { setRoute } from './routes';
+import { InvoiceDB } from './invoicedb';
+type WalletHTTPOptions = wallet.HTTPOptions;
 
+export type BPayHTTPOptions = Partial<WalletHTTPOptions> & {
+  invoicedb: InvoiceDB;
+  logger: Logger;
+};
 export class HTTP extends Server {
   public invoicedb;
+  public network: Network;
   private logger: Logger;
-  constructor(options) {
-    super();
-    this.logger = options.logger || new Logger(options.loglevel);
+  private port: number;
+  constructor(options: BPayHTTPOptions) {
+    super(options);
+    this.network = this.options.network;
+    this.port = options.port || this.network.walletPort;
+    this.logger = options.logger.context('bpay http');
     this.invoicedb = options.invoicedb;
     this.init();
   }
@@ -50,6 +61,9 @@ export class HTTP extends Server {
   // private initSockets() {}
   private initApp() {
     const appDir = './frontend';
-    this.use('$/^', this.fileServer(path.join(__dirname, appDir)));
+    // this.use('$/^', this.fileServer(path.join(__dirname, appDir)));
+    this.get('/', async (req, res) => {
+      res.json(200);
+    });
   }
 }

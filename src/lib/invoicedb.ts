@@ -10,4 +10,6 @@ export class InvoiceDB {
 
 export type InvoiceDBOptions = Partial<{
   logger: Logger;
+  prefix: string;
+  memory: boolean;
 }>;

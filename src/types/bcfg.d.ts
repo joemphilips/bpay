@@ -70,19 +70,19 @@ declare module 'bcfg' {
      * @param key
      * @param fallback
      */
-    str(key: string, fallback: object): string;
+    str(key: string, fallback: string): string;
     /**
      * get config option as a integer
      * @param key
      * @param fallback
      */
-    int(key: string, fallback: object): string;
+    int(key: string, fallback: number): number;
     /**
      * get config option as a boolean
      * @param key
      * @param fallback
      */
-    bool(key: string, fallback: object): string;
+    bool(key: string, fallback: boolean): boolean;
     /**
      * create a new file path under `this.prefix`
      * NOTE: does not actually create the file

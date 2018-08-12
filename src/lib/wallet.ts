@@ -1,1 +1,0 @@
-import { Wallet } from 'bcoin';

@@ -7,7 +7,7 @@ declare module 'bcoin' {
   import BN from 'bn.js';
 
   import { EventEmitter } from 'events';
-  import Logger from 'blgr';
+  import Logger, { LoggerContext } from 'blgr';
   import * as bweb from 'bweb';
   import * as bclient from 'bclient';
   import { DB, Batch } from 'bdb';
@@ -112,12 +112,14 @@ declare module 'bcoin' {
 
   export namespace node {
     export class Node extends EventEmitter {
+      config: Config;
       network: NetworkType;
       /**
        * if use memory db or not. default to true.
        */
       memory: boolean;
       starttime: number;
+      bound: any[];
       stack: Array<any>;
       spv: boolean;
       chain?: blockchain.Chain;
@@ -159,6 +161,28 @@ declare module 'bcoin' {
     export class FullNode extends Node {
       constructor(options: ConfigOption);
       [key: string]: any;
+    }
+
+    export class HTTPOptions {
+      network: Network;
+      logger: Logger | null;
+      node: Node | null;
+      apiKey: string;
+      apiHash: Buffer;
+      adminToken: Buffer;
+      serviceHash: Buffer;
+      noAuth: boolean;
+      cors: boolean;
+      prefix: null | string;
+      host: string;
+      port: number;
+      ssl: boolean;
+      keyFile: null | string;
+      certFile: null | string;
+    }
+
+    export class HTTP extends bweb.Server {
+      constructor(options: HTTPOptions);
     }
 
     export class SPVNode {}
@@ -211,7 +235,6 @@ declare module 'bcoin' {
       public toInv(): InvItem;
       Buffer;
     }
-
     export class Input {}
 
     export class InvItem {}
@@ -298,9 +321,51 @@ declare module 'bcoin' {
       maxFeeRate: number;
       selfConnect: boolean;
       requestMempool: boolean;
+      time: TimeData;
       public checkpoints: { hash: string; height: number }[];
       constructor(options: Partial<NetworkOptions>);
       static get(type: NetworkType): Network;
+      private init(): void;
+      /**
+       * Get deployment info by bit index.
+       * @param bit
+       */
+      public byBit(bit: number): Deploy;
+      /**
+       * get network adjusted time.
+       */
+      public now(): number;
+      /**
+       * Get network adjusted time in milliseconds.
+       */
+      public ms(): number;
+      static create(): Network;
+      /**
+       * Set the default network.
+       * @param type
+       */
+      static set(type: NetworkType): Network;
+      static get(type: NetworkType): Network;
+      private static by(
+        value: object,
+        compare: Function,
+        network: Network | null,
+        name: string
+      );
+      static fromMagic(value, network): Network;
+      static fromWIF(prefix, network): Network;
+      /**
+       * from xpubkey prefix
+       * @param prefix
+       * @param network
+       */
+      static fromPublic(prefix: number, network?: Network): Network;
+      static fromPrivate(prefix: number, network?: Network): Network;
+      static fromPublic58(prefix: string, network?: Network): Network;
+      static fromPrivate58(prefix: string, network?: Network): Network;
+      static fromAddress(prefix: number, network?: Network): Network;
+      static fromBech32(prefix: number, network?: Network): Network;
+      toString(): NetworkType;
     }
 
     export interface NetworkOptions {
@@ -341,6 +406,8 @@ declare module 'bcoin' {
       selfConnect: boolean;
       requestMempool: boolean;
     }
+
+    export interface TimeData {}
 
     interface AddressPrefix {
       pubkeyhash: number;
@@ -990,8 +1057,21 @@ declare module 'bcoin' {
 
     export class RPC {}
 
-    export class HTTP extends bweb.Server {}
+    export class HTTP extends bweb.Server {
+      public network: Network;
+      public logger: LoggerContext | null;
+      public node: Node | null;
+      public chain: blockchain.Chain | null;
+      public mempool: Pool | null;
+      public fees: Fees | null;
+      public miner: Miner | null;
+      public rpc: any | null;
+      constructor(options: Partial<HTTPOptions>);
+    }
 
+    export class HTTPOptions extends node.HTTPOptions {
+      walletAuth: boolean;
+    }
     /**
      * defined as `WalletClient` internally.
      * client for wallet to communicate with the node
