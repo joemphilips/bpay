@@ -6,7 +6,6 @@ declare module 'bcoin' {
   import { BufferWriter, BufferReader } from 'bufio';
   import BN from 'bn.js';
   import AsyncEmitter from 'bevent';
-
   import { EventEmitter } from 'events';
   import Logger, { LoggerContext } from 'blgr';
   import * as bweb from 'bweb';
@@ -14,6 +13,7 @@ declare module 'bcoin' {
   import { DB, Batch } from 'bdb';
   import { Lock } from 'bmutex';
   import Config, { ConfigOption } from 'bcfg';
+  import LRU from 'blru';
   export interface BcoinPlugin {
     init(node: Node): BcoinPluginInstance;
   }
@@ -41,6 +41,30 @@ declare module 'bcoin' {
       prefix?: string;
       location?: string;
     }
+
+    export class ChainDB {
+      public options: ChainDBOptions;
+      constructor(options?: ChainDBOptions);
+    }
+
+    interface ChainDBOptions {
+      network: Network;
+      logger: LoggerContext;
+      db: DB;
+      stateCache: StateCache;
+      state: ChainState;
+      pending: null | ChainState;
+      current: Batch;
+      coinCache: LRU;
+      cacheHash: LRU;
+      cacheHeight: LRU;
+      open(): Promise<void>;
+    }
+
+    class StateCache {}
+
+    class ChainState {}
+
     export class ChainEntry {}
   }
 
@@ -328,6 +352,7 @@ declare module 'bcoin' {
        * accepts non-standard tx.
        */
       requireStandard: boolean;
+      rpcPort: number;
       walletPort: number;
       minRelay: number;
       feeRate: number;
@@ -412,6 +437,7 @@ declare module 'bcoin' {
        * accepts non-standard tx.
        */
       requireStandard: boolean;
+      rpcPort: number;
       walletPort: number;
       minRelay: number;
       feeRate: number;

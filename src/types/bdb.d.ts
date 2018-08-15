@@ -190,7 +190,7 @@ declare module 'bdb' {
   export class Key {
     constructor(id: ID, ops?: string[]);
     build(
-      id: Buffer,
+      id?: Buffer,
       ...args: { getSize: Function; [key: string]: any }[] | null
     ): Buffer;
     parse(key: Key);
@@ -203,7 +203,7 @@ declare module 'bdb' {
         location: string;
       } & DBOptions
     >
-  );
+  ): DB;
 
-  export function key(id: string, args?: string[]): Key;
+  export function key(id?: string, args?: string[]): Key;
 }
