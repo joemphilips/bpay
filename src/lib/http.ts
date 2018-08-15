@@ -1,6 +1,7 @@
 import { wallet, Network } from 'bcoin';
 import Logger from 'blgr';
 import { Server } from 'bweb';
+import * as fs from 'fs';
 import * as path from 'path';
 import { setRoute } from './routes';
 import { InvoiceDB } from './invoicedb';
@@ -50,7 +51,7 @@ export class HTTP extends Server {
     this.use(this.bodyParser());
     this.initRouter();
     // this.initSockets();
-    this.initApp();
+    // this.initApp();
   }
 
   private initRouter() {
@@ -60,10 +61,10 @@ export class HTTP extends Server {
 
   // private initSockets() {}
   private initApp() {
-    const appDir = './frontend';
-    // this.use('$/^', this.fileServer(path.join(__dirname, appDir)));
-    this.get('/', async (req, res) => {
-      res.json(200);
-    });
+    const appDir = path.join(__dirname, '../../../public/build/index.html');
+    // tslint:disable no-console
+    console.log('appDir');
+    console.log(appDir);
+    this.get('/', this.fileServer(appDir));
   }
 }

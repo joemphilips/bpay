@@ -51,6 +51,7 @@ export class Plugin extends EventEmitter {
     await this.http.open();
     this.logger.debug('bpay plugin opened!');
   }
+
   public async close() {
     await this.invoicedb.close();
     await this.http.close();

@@ -2,6 +2,10 @@ import { wallet, Network, FullNode } from 'bcoin';
 import anyTest, { ExecutionContext, TestInterface } from 'ava';
 import { Plugin as Bpay } from './plugin';
 import { WalletClient, NodeClient } from 'bclient';
+
+const sleep = (msec: number) =>
+  new Promise(resolve => setTimeout(resolve, msec));
+
 const ADMIN_TOKEN = Buffer.alloc(32, 1).toString('hex');
 
 const networkName = 'regtest';
@@ -57,6 +61,8 @@ test.beforeEach(
 );
 
 test('it should serve app', async (t: ExecutionContext<HTTPTestContext>) => {
+  // tslint:disable-next-line
+  console.log(fullNode.opened);
   const info = await t.context.nodeClient.getInfo();
   // tslint:disable-next-line
   console.log(info);
