@@ -25,10 +25,6 @@ export class HTTP extends Server {
     this.init();
   }
 
-  public async close() {
-    await this.invoicedb.close();
-  }
-
   private init() {
     this.on('request', (req, res) => {
       this.logger.debug(
@@ -49,22 +45,23 @@ export class HTTP extends Server {
 
     this.use(this.router());
     this.use(this.bodyParser());
+    this.initApp();
     this.initRouter();
     // this.initSockets();
-    // this.initApp();
   }
 
   private initRouter() {
-    // setRoute(this);
-    this.logger.warning('not implemented');
+    this.get('/_health', (req, res) => {
+      res.json(200, { good: 'good' });
+    });
   }
 
   // private initSockets() {}
   private initApp() {
     const appDir = path.join(__dirname, '../../../public/build/index.html');
     // tslint:disable no-console
-    console.log('appDir');
-    console.log(appDir);
-    this.get('/', this.fileServer(appDir));
+    // console.log('appDir');
+    // console.log(appDir);
+    this.use('/app', this.fileServer(appDir));
   }
 }
