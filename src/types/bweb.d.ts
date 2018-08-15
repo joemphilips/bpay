@@ -53,6 +53,10 @@ declare module 'bweb' {
     public wallet: null | Wallet;
     constructor(req, res, url);
     public parse(url: string): void;
+    /**
+     * change `url`, `pathname`, `path`, `query` of this to `url`'s
+     * @param url
+     */
     public navigate(url: string): void;
     [key: string]: any;
   }
@@ -144,15 +148,15 @@ declare module 'bweb' {
     /**
      *
      * @param path
-     * @param server - parent server to mount. push `Hook (path, server)` to `this.mounts`
+     * @param server - child server to mount. push `Hook (path, server)` to `this.mounts`
      */
     private mount(path: string, server: Server): void;
     /**
-     * attach server to this.
+     * Attach this to another server.
      * 1. bind `"error"` `"connection"` , and `"error"` events to this.
      * 2.
      * @param path - subpath to be attached
-     * @param server - Child server to attach
+     * @param server - Parent server to attach
      */
     public attach(path: string, server: Server): void;
     public use(path: string, handler: RequestHandler): void;
@@ -241,7 +245,14 @@ declare module 'bweb' {
   }>;
 
   class Hook {
+    public path: string;
+    public handler: Function;
     constructor(path: string, handler: RequestHandler);
+    /**
+     * if pathname is subpath of this.path, returns true
+     * @param pathname
+     */
+    public isPrefix(pathname: string): boolean;
   }
 
   export function createServer(options?: ServerOptions): Server;

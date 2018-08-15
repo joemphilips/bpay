@@ -5,6 +5,7 @@
 declare module 'bcoin' {
   import { BufferWriter, BufferReader } from 'bufio';
   import BN from 'bn.js';
+  import AsyncEmitter from 'bevent';
 
   import { EventEmitter } from 'events';
   import Logger, { LoggerContext } from 'blgr';
@@ -22,12 +23,24 @@ declare module 'bcoin' {
     close(): Promise<void>;
   }
 
+  type SighashType = 'ALL' | 'NONE' | 'SINGLE' | 1 | 2 | 3 | 0x08;
+
   /**
    * Fee rate per kilobyte/satoshi.
    */
   type Rate = number;
   export namespace blockchain {
-    export class Chain {}
+    export class Chain extends AsyncEmitter {
+      constructor(options?: Partial<ChainOptions>);
+    }
+
+    interface ChainOptions {
+      network: Network;
+      logger: Logger;
+      workers?: WorkerPool;
+      prefix?: string;
+      location?: string;
+    }
     export class ChainEntry {}
   }
 
@@ -275,7 +288,7 @@ declare module 'bcoin' {
   export type Headers = primitives.Headers;
   export type Input = primitives.Input;
   export type InvItem = primitives.InvItem;
-  export type keyRing = primitives.KeyRing;
+  export type KeyRing = primitives.KeyRing;
   export type MerkleBlock = primitives.MerkleBlock;
   export type MTX = primitives.MTX;
   export type Outpoint = primitives.Outpoint;
@@ -494,6 +507,361 @@ declare module 'bcoin' {
   export type networks = protocol.networks;
   export type policy = protocol.policy;
   export namespace script {
+    export namespace common {
+      export type opcodes = {
+        // Push
+        OP_0: 0x00;
+
+        OP_PUSHDATA1: 0x4c;
+        OP_PUSHDATA2: 0x4d;
+        OP_PUSHDATA4: 0x4e;
+
+        OP_1NEGATE: 0x4f;
+
+        OP_RESERVED: 0x50;
+
+        OP_1: 0x51;
+        OP_2: 0x52;
+        OP_3: 0x53;
+        OP_4: 0x54;
+        OP_5: 0x55;
+        OP_6: 0x56;
+        OP_7: 0x57;
+        OP_8: 0x58;
+        OP_9: 0x59;
+        OP_10: 0x5a;
+        OP_11: 0x5b;
+        OP_12: 0x5c;
+        OP_13: 0x5d;
+        OP_14: 0x5e;
+        OP_15: 0x5f;
+        OP_16: 0x60;
+
+        // Control
+        OP_NOP: 0x61;
+        OP_VER: 0x62;
+        OP_IF: 0x63;
+        OP_NOTIF: 0x64;
+        OP_VERIF: 0x65;
+        OP_VERNOTIF: 0x66;
+        OP_ELSE: 0x67;
+        OP_ENDIF: 0x68;
+        OP_VERIFY: 0x69;
+        OP_RETURN: 0x6a;
+
+        // Stack
+        OP_TOALTSTACK: 0x6b;
+        OP_FROMALTSTACK: 0x6c;
+        OP_2DROP: 0x6d;
+        OP_2DUP: 0x6e;
+        OP_3DUP: 0x6f;
+        OP_2OVER: 0x70;
+        OP_2ROT: 0x71;
+        OP_2SWAP: 0x72;
+        OP_IFDUP: 0x73;
+        OP_DEPTH: 0x74;
+        OP_DROP: 0x75;
+        OP_DUP: 0x76;
+        OP_NIP: 0x77;
+        OP_OVER: 0x78;
+        OP_PICK: 0x79;
+        OP_ROLL: 0x7a;
+        OP_ROT: 0x7b;
+        OP_SWAP: 0x7c;
+        OP_TUCK: 0x7d;
+
+        // Splice
+        OP_CAT: 0x7e;
+        OP_SUBSTR: 0x7f;
+        OP_LEFT: 0x80;
+        OP_RIGHT: 0x81;
+        OP_SIZE: 0x82;
+
+        // Bit
+        OP_INVERT: 0x83;
+        OP_AND: 0x84;
+        OP_OR: 0x85;
+        OP_XOR: 0x86;
+        OP_EQUAL: 0x87;
+        OP_EQUALVERIFY: 0x88;
+        OP_RESERVED1: 0x89;
+        OP_RESERVED2: 0x8a;
+
+        // Numeric
+        OP_1ADD: 0x8b;
+        OP_1SUB: 0x8c;
+        OP_2MUL: 0x8d;
+        OP_2DIV: 0x8e;
+        OP_NEGATE: 0x8f;
+        OP_ABS: 0x90;
+        OP_NOT: 0x91;
+        OP_0NOTEQUAL: 0x92;
+        OP_ADD: 0x93;
+        OP_SUB: 0x94;
+        OP_MUL: 0x95;
+        OP_DIV: 0x96;
+        OP_MOD: 0x97;
+        OP_LSHIFT: 0x98;
+        OP_RSHIFT: 0x99;
+        OP_BOOLAND: 0x9a;
+        OP_BOOLOR: 0x9b;
+        OP_NUMEQUAL: 0x9c;
+        OP_NUMEQUALVERIFY: 0x9d;
+        OP_NUMNOTEQUAL: 0x9e;
+        OP_LESSTHAN: 0x9f;
+        OP_GREATERTHAN: 0xa0;
+        OP_LESSTHANOREQUAL: 0xa1;
+        OP_GREATERTHANOREQUAL: 0xa2;
+        OP_MIN: 0xa3;
+        OP_MAX: 0xa4;
+        OP_WITHIN: 0xa5;
+
+        // Crypto
+        OP_RIPEMD160: 0xa6;
+        OP_SHA1: 0xa7;
+        OP_SHA256: 0xa8;
+        OP_HASH160: 0xa9;
+        OP_HASH256: 0xaa;
+        OP_CODESEPARATOR: 0xab;
+        OP_CHECKSIG: 0xac;
+        OP_CHECKSIGVERIFY: 0xad;
+        OP_CHECKMULTISIG: 0xae;
+        OP_CHECKMULTISIGVERIFY: 0xaf;
+
+        // Expansion
+        OP_NOP1: 0xb0;
+        OP_CHECKLOCKTIMEVERIFY: 0xb1;
+        OP_CHECKSEQUENCEVERIFY: 0xb2;
+        OP_NOP4: 0xb3;
+        OP_NOP5: 0xb4;
+        OP_NOP6: 0xb5;
+        OP_NOP7: 0xb6;
+        OP_NOP8: 0xb7;
+        OP_NOP9: 0xb8;
+        OP_NOP10: 0xb9;
+
+        // Custom
+        OP_INVALIDOPCODE: 0xff;
+      };
+
+      export type opcodesByVal = {
+        0x00: 'OP_0';
+
+        0x4c: 'OP_PUSHDATA1';
+        0x4d: 'OP_PUSHDATA2';
+        0x4e: 'OP_PUSHDATA4';
+
+        0x4f: 'OP_1NEGATE';
+
+        0x50: 'OP_RESERVED';
+
+        0x51: 'OP_1';
+        0x52: 'OP_2';
+        0x53: 'OP_3';
+        0x54: 'OP_4';
+        0x55: 'OP_5';
+        0x56: 'OP_6';
+        0x57: 'OP_7';
+        0x58: 'OP_8';
+        0x59: 'OP_9';
+        0x5a: 'OP_10';
+        0x5b: 'OP_11';
+        0x5c: 'OP_12';
+        0x5d: 'OP_13';
+        0x5e: 'OP_14';
+        0x5f: 'OP_15';
+        0x60: 'OP_16';
+
+        // Control
+        0x61: 'OP_NOP';
+        0x62: 'OP_VER';
+        0x63: 'OP_IF';
+        0x64: 'OP_NOTIF';
+        0x65: 'OP_VERIF';
+        0x66: 'OP_VERNOTIF';
+        0x67: 'OP_ELSE';
+        0x68: 'OP_ENDIF';
+        0x69: 'OP_VERIFY';
+        0x6a: 'OP_RETURN';
+
+        // Stack
+        0x6b: 'OP_TOALTSTACK';
+        0x6c: 'OP_FROMALTSTACK';
+        0x6d: 'OP_2DROP';
+        0x6e: 'OP_2DUP';
+        0x6f: 'OP_3DUP';
+        0x70: 'OP_2OVER';
+        0x71: 'OP_2ROT';
+        0x72: 'OP_2SWAP';
+        0x73: 'OP_IFDUP';
+        0x74: 'OP_DEPTH';
+        0x75: 'OP_DROP';
+        0x76: 'OP_DUP';
+        0x77: 'OP_NIP';
+        0x78: 'OP_OVER';
+        0x79: 'OP_PICK';
+        0x7a: 'OP_ROLL';
+        0x7b: 'OP_ROT';
+        0x7c: 'OP_SWAP';
+        0x7d: 'OP_TUCK';
+
+        // Splice
+        0x7e: 'OP_CAT';
+        0x7f: 'OP_SUBSTR';
+        0x80: 'OP_LEFT';
+        0x81: 'OP_RIGHT';
+        0x82: 'OP_SIZE';
+
+        // Bit
+        0x83: 'OP_INVERT';
+        0x84: 'OP_AND';
+        0x85: 'OP_OR';
+        0x86: 'OP_XOR';
+        0x87: 'OP_EQUAL';
+        0x88: 'OP_EQUALVERIFY';
+        0x89: 'OP_RESERVED1';
+        0x8a: 'OP_RESERVED2';
+
+        // Numeric
+        0x8b: 'OP_1ADD';
+        0x8c: 'OP_1SUB';
+        0x8d: 'OP_2MUL';
+        0x8e: 'OP_2DIV';
+        0x8f: 'OP_NEGATE';
+        0x90: 'OP_ABS';
+        0x91: 'OP_NOT';
+        0x92: 'OP_0NOTEQUAL';
+        0x93: 'OP_ADD';
+        0x94: 'OP_SUB';
+        0x95: 'OP_MUL';
+        0x96: 'OP_DIV';
+        0x97: 'OP_MOD';
+        0x98: 'OP_LSHIFT';
+        0x99: 'OP_RSHIFT';
+        0x9a: 'OP_BOOLAND';
+        0x9b: 'OP_BOOLOR';
+        0x9c: 'OP_NUMEQUAL';
+        0x9d: 'OP_NUMEQUALVERIFY';
+        0x9e: 'OP_NUMNOTEQUAL';
+        0x9f: 'OP_LESSTHAN';
+        0xa0: 'OP_GREATERTHAN';
+        0xa1: 'OP_LESSTHANOREQUAL';
+        0xa2: 'OP_GREATERTHANOREQUAL';
+        0xa3: 'OP_MIN';
+        0xa4: 'OP_MAX';
+        0xa5: 'OP_WITHIN';
+
+        // Crypto
+        0xa6: 'OP_RIPEMD160';
+        0xa7: 'OP_SHA1';
+        0xa8: 'OP_SHA256';
+        0xa9: 'OP_HASH160';
+        0xaa: 'OP_HASH256';
+        0xab: 'OP_CODESEPARATOR';
+        0xac: 'OP_CHECKSIG';
+        0xad: 'OP_CHECKSIGVERIFY';
+        0xae: 'OP_CHECKMULTISIG';
+        0xaf: 'OP_CHECKMULTISIGVERIFY';
+
+        // Expansion
+        0xb0: 'OP_NOP1';
+        0xb1: 'OP_CHECKLOCKTIMEVERIFY';
+        0xb2: 'OP_CHECKSEQUENCEVERIFY';
+        0xb3: 'OP_NOP4';
+        0xb4: 'OP_NOP5';
+        0xb5: 'OP_NOP6';
+        0xb6: 'OP_NOP7';
+        0xb7: 'OP_NOP8';
+        0xb8: 'OP_NOP9';
+        0xb9: 'OP_NOP10';
+
+        // Custom
+        0xff: 'OP_INVALIDOPCODE';
+      };
+
+      export type flags = {
+        VERIFY_NONE: 0;
+        VERIFY_P2SH: 1;
+        VERIFY_STRICTENC: 2;
+        VERIFY_DERSIG: 4;
+        VERIFY_LOW_S: 8;
+        VERIFY_NULLDUMMY: 16;
+        VERIFY_SIGPUSHONLY: 32;
+        VERIFY_MINIMALDATA: 64;
+        VERIFY_DISCOURAGE_UPGRADABLE_NOPS: 128;
+        VERIFY_CLEANSTACK: 256;
+        VERIFY_CHECKLOCKTIMEVERIFY: 512;
+        VERIFY_CHECKSEQUENCEVERIFY: 1024;
+        VERIFY_WITNESS: 2048;
+        VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM: 4096;
+        VERIFY_MINIMALIF: 8192;
+        VERIFY_NULLFAIL: 16384;
+        VERIFY_WITNESS_PUBKEYTYPE: 32768;
+        /**
+         * Consensus verify flags ... used for block validation.
+         */
+        MANDATORY_VERIFY_FLAGS: number;
+        /**
+         * Used for mempool validation.
+         */
+        STANDARD_VERIFY_FLAGS: number;
+        /**
+         * `STANDARD_VERIFY_FLAGS & ~MANDATORY_VERIFY_FLAGS`
+        /**
+         */
+        ONLY_STANDARD_VERIFY_FLAGS: number;
+      };
+
+      export type hashType = {
+        ALL: 1;
+        NONE: 2;
+        SINGLE: 3;
+        ANYONECANPAY: 0x08;
+      };
+
+      export type hashTypeByVal = {
+        1: 'ALL';
+        2: 'NONE';
+        3: 'SINGLE';
+        0x80: 'ANYONECANPAY';
+      };
+
+      /**
+       * output script types
+       */
+      export type types = {
+        NONSTANDARD: 0;
+        PUBKEY: 1;
+        PUBKEYHASH: 2;
+        SCRIPTHASH: 3;
+        MULTISIG: 4;
+        NULLDATA: 5;
+        WITNESSMALFORMED: 0x80;
+        WITNESSSCRIPTHASH: 0x81;
+        WITNESSPUBKEYHASH: 0x82;
+      };
+
+      export type typesByVal = {
+        0: 'NONSTANDARD';
+        1: 'PUBKEY';
+        2: 'PUBKEYHASH';
+        3: 'SCRIPTHASH';
+        4: 'MULTISIG';
+        5: 'NULLDATA';
+        0x80: 'WITNESSMALFORMED';
+        0x81: 'WITNESSSCRIPTHASH';
+        0x82: 'WITNESSPUBKEYHASH';
+      };
+
+      /**
+       * check a signature is it holds valid sighash type or not.
+       */
+      export type isHashType = (sig: Buffer) => boolean;
+      export type isLowDER = (sig: Buffer) => boolean;
+      export type isKeyEncoding = (key: Buffer) => boolean;
+      export type isCompressedEncoding = (key: Buffer) => boolean;
+      export type isSignatureEncoding = (sig: Buffer) => boolean;
+    }
     export class Opcode {}
 
     export class Program {}
@@ -1120,10 +1488,132 @@ declare module 'bcoin' {
   /// ------ worker ------
 
   export namespace workers {
-    export class WorkerPool {}
+    export class WorkerPool {
+      enabled: boolean;
+      size: number;
+      timeout: number;
+      file: string;
+      children: Map<number, Worker>;
+      uid: number;
+      constructor(options: WorkerPoolOptions);
+      open(): Promise<void>;
+      close(): Promise<void>;
+      /**
+       * Spawn new worker, if one with the `id` already exists,
+       * then replace with the new one.
+       * @param id
+       */
+      spawn(id: number): Worker;
+      /**
+       * Allocate a new worker. consider `size` and make sure
+       * it wont make too much worker.
+       */
+      alloc(): Worker;
+      sendEvent(...args: any[]): boolean;
+      /**
+       * Destroy wll workers.
+       */
+      destroy(): void;
+      execute(packet: Packet, timeout: number): Promise<void>;
+      /**
+       * Execute the tx check jobs
+       * @param tx
+       * @param view
+       * @param flags
+       */
+      check(tx: TX, view?: CoinView, flags?: number): Promise<null>;
+
+      sign(mtx: MTX, ring?: KeyRing[], type?: SighashType): Promise<null>;
+
+      checkInput(
+        tx: TX,
+        index: number,
+        coin?: Coin | Output,
+        flags?: number
+      ): Promise<void>;
+
+      signInput(
+        tx: MTX,
+        index: number,
+        coin?: Coin | Output,
+        keyring?: KeyRing,
+        type?: SighashType
+      ): Promise<void>;
+
+      ecVerify(msg: Buffer, sig: Buffer, key: Buffer): Promise<number>;
+      ecSign(msg: Buffer, key: Buffer): Promise<number>;
+      mine(
+        data: Buffer,
+        target?: Buffer,
+        min?: number,
+        max?: number
+      ): Promise<number>;
+
+      script(
+        passwd: Buffer,
+        salt?: Buffer,
+        N?: number,
+        r?: number,
+        p?: number,
+        len?: number
+      ): Promise<any>;
+    }
+    /**
+     * Unit for workers to communicate with master.
+     */
+    abstract class Packet {
+      public id: number;
+      public cmd: number;
+      constructor();
+      abstract getSize(): number;
+      abstract toWriter(): BufferWriter;
+      abstract fromRaw(data: Buffer): any;
+      static fromRaw(data): any;
+    }
+
+    class CheckPacket implements Packet {
+      public id: number;
+      public cmd: 5;
+      constructor(tx?: TX, view?: CoinView, flags?: number);
+      getSize(): number;
+      toWriter(): BufferWriter;
+      fromRaw(data: Buffer): CheckPacket;
+      static fromRaw(data): CheckPacket;
+    }
+
+    class SignPacket implements Packet {
+      public id: number;
+      public cmd: 7;
+      constructor(tx?: MTX, rings?: KeyRing[], type?: SighashType);
+      getSize(): number;
+      toWriter(): BufferWriter;
+      fromRaw(data: Buffer): SignPacket;
+      static fromRaw(data): SignPacket;
+    }
+
+    interface WorkerPoolOptions {
+      enabled: boolean;
+      /**
+       * Number of cpu core to use.
+       */
+      size: number;
+      timeout: number;
+      /**
+       * defaults to `bcoin/lib/workers/worker.js`
+       * You can configure this by `BCOIN_WORKER_FILE`
+       */
+      file: string;
+    }
+
+    interface Worker {}
+    export class Framer {}
+    export class jobs {}
+    export class packets {}
+
+    export class Parser {}
   }
 
-  export type WorkerPool = workers.WorkerPool;
+  export class WorkerPool extends workers.WorkerPool {}
 
   export interface pkg {
     readonly version: string;
