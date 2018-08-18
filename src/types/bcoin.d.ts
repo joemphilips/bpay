@@ -4,6 +4,7 @@
 
 declare module 'bcoin' {
   import { BufferWriter, BufferReader } from 'bufio';
+  import { BloomFilter } from 'bfilter';
   import BN from 'bn.js';
   import AsyncEmitter from 'bevent';
   import { EventEmitter } from 'events';
@@ -29,6 +30,15 @@ declare module 'bcoin' {
    * Fee rate per kilobyte/satoshi.
    */
   type Rate = number;
+
+  /**
+   * Currently, some hashes are represented as hex string
+   * for the sake of performance.
+   * but in the near future, it will use Buffer instead. This type
+   * is supposed to represent that type going to change.
+   * refs: https://github.com/bcoin-org/bcoin/issues/533
+   */
+  type HashKey = string;
   export namespace blockchain {
     export class Chain extends AsyncEmitter {
       constructor(options?: Partial<ChainOptions>);
@@ -43,29 +53,235 @@ declare module 'bcoin' {
     }
 
     export class ChainDB {
-      public options: ChainDBOptions;
-      constructor(options?: ChainDBOptions);
-    }
-
-    interface ChainDBOptions {
+      options: Partial<ChainDBOptions>;
       network: Network;
-      logger: LoggerContext;
       db: DB;
       stateCache: StateCache;
       state: ChainState;
       pending: null | ChainState;
-      current: Batch;
+      current: Batch | null;
       coinCache: LRU;
       cacheHash: LRU;
       cacheHeight: LRU;
+      constructor(options: ChainDBOptions);
       open(): Promise<void>;
+      close(): Promise<void>;
+      start(): Batch;
+
+      // ----- these methods all works for current batch.------
+      put(key: string, value: Buffer): void;
+      del(key: string): void;
+      /**
+       * Get currenct batch
+       */
+      batch(): Batch;
+      drop(): void;
+      commit(): Promise<void>;
+      // ------------------------------------------------------
+
+      /**
+       * @param block - Blockhash or height.
+       */
+      hasCache(block: Buffer | number): boolean;
+      /**
+       * @param block - Blockhash or height.
+       */
+      getCache(block: Buffer | number): Block;
+      getHeight(hash: HashKey): Promise<number>;
+      getHash(hash: HashKey): Promise<number>;
+      private getEntryByHeight(height: number): Promise<ChainEntry>;
+      private getEntryByHash(hash: HashKey): Promise<ChainEntry>;
+      getEntry(block: number | HashKey): Promise<ChainEntry>;
+      hasEntry(hash: HashKey): Promise<boolean>;
+      getAncestor(entry: ChainEntry, height: number): Promise<ChainEntry>;
+      getPrevious(entry: ChainEntry): Promise<ChainEntry>;
+      getPrevCache(entry: ChainEntry): Promise<ChainEntry | null>;
+      getPrevious(entry: ChainEntry): Promise<ChainEntry>;
+      getNext(entry: ChainEntry): Promise<ChainEntry>;
+      getNextEntry(entry: ChainEntry): Promise<ChainEntry>;
+      getTip(): Promise<ChainEntry>;
+      getState(): Promise<ChainState>;
+      getFlags(): Promise<ChainFlags | null>;
+      getStateCache(): Promise<StateCache>;
+
+      // ------ these are called on initial db load ------
+      private verifyFlags(state: ChainState): Promise<void>;
+      private verifyDeployments(): Promise<boolean>;
+      private checkDeployments(): Promise<boolean>;
+
+      // ------ these are called only when db initialized -------
+      private saveDeployments(): Promise<void>;
+      private saveGenesis(): Promise<void>;
+      private saveFlags(): Promise<void>;
+      private writeDeployments(): Promise<void>;
+
+      /**
+       * Retroactively prune the database.
+       * Called only when forceFlags is true.
+       */
+      prune(): Promise<boolean>;
+      getNextHash(hash: HashKey): Promise<string>;
+      isMainHash(hash: HashKey): Promise<boolean>;
+      isMainChain(entry: ChainEntry): Promise<boolean>;
+      getHashes(start?: number, end?: number): Promise<string[]>;
+      /**
+       * get all entries
+       */
+      getEntries(): Promise<ChainEntry[]>;
+      getTips(): Promise<HashKey[]>;
+      private readCoin(): Promise<CoinEntry>;
+      getCoin(hash: HashKey, index: number): Promise<Coin>;
+      /**
+       * necessary for bip30
+       * @param tx
+       */
+      hasCoins(tx): Promise<boolean>;
+      getCoinView(tx: TX): Promise<CoinView>;
+      getSpentView(tx: TX): Promise<CoinView>;
+      getUndoCoins(hash: HashKey): Promise<Coin[]>;
+      getBlock(hash: HashKey): Promise<Block | null>;
+      private getRawBlock(block: HashKey): Promise<Block | null>;
+
+      /**
+       * The result view will be passed to `block.getJSON`
+       * It is necessary to make sure tx in the block has prevOut.
+       * @param block
+       */
+      getBlockView(block: Block): Promise<CoinView>;
+      /**
+       * get a TX with metadata.
+       * indexTX must be set to `true`.
+       * @param hash - transaction's hash
+       */
+      getMeta(hash: HashKey): Promise<primitives.TXMeta | null>;
+      getTX(hash: HashKey): Promise<TX>;
+      hasTX(hash: HashKey): Promise<boolean>;
+      /**
+       * `indexAddress` must be `true` to use this.
+       * otherwise it will return empty array.
+       * @param addrs
+       */
+      getCoinsByAddress(addrs: Address[]): Promise<Coin[]>;
+      /**
+       * returns transaction hashes for the address.
+       * @param addrs
+       */
+      getHashesByAddress(addrs: Address[]): Promise<HashKey[]>;
+      getTXByAddress(addrs: Address[]): Promise<TX[]>;
+      getMetaByAddress(addrs: Address[]): Promise<primitives.TXMeta>;
+      scan(
+        start: HashKey | number | null,
+        filter: BloomFilter,
+        iter: ScanIterator
+      ): Promise<void>;
+      /**
+       * save block as a new tip. Which does not perform any verification.
+       * @param entry
+       * @param block
+       * @param view
+       */
+      save(entry: ChainEntry, block: Block, view?: CoinView): Promise<void>;
+      reconnect(entry: ChainEntry, block: Block, view: CoinView): Promise<void>;
+      disconnect(entry: ChainEntry, block: Block): Promise<CoinView>;
+      reset(block: HashKey | number): Promise<ChainEntry>;
+      private removeChains(): Promise<void>;
+      private saveBlock(
+        entry: ChainEntry,
+        block: Block,
+        view?: CoinView
+      ): Promise<Block>;
+    }
+    export type ScanIterator = (entry: ChainEntry, txs: TX[]) => Promise<void>;
+
+    type ChainDBOptions = Partial<ChainFlagsOption> & {
+      network: Network;
+      logger: LoggerContext;
+      coinCache: number;
+      entryCache: number;
+      /**
+       * Most of ChainFlags can not be retroactively changed.
+       * But this option will for change.
+       */
+      forceFlags: boolean;
+    };
+
+    class ChainFlags {
+      public network: Network;
+      spv: boolean;
+      witness: boolean;
+      bip91: boolean;
+      bip148: boolean;
+      prune: boolean;
+      indexTX: boolean;
+      indexAddress: boolean;
+      constructor(options?: Partial<ChainFlagsOption>);
+    }
+
+    interface ChainFlagsOption {
+      network: Network | NetworkType;
+      spv: boolean;
+      bip91: boolean;
+      bip148: boolean;
+      prune: boolean;
+      indexTX: boolean;
+      indexAddress: boolean;
     }
 
     class StateCache {}
 
     class ChainState {}
 
-    export class ChainEntry {}
+    export class ChainEntry {
+      static MAX_CHAIN_WORK: BN;
+      hash: HashKey;
+      version: number;
+      prevBlock: string;
+      merkleRoot: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      height: number;
+      chainwork: BN;
+      constructor(options?: ChainEntryOptions);
+      fromOptions(options: ChainEntryOptions): Promise<ChainEntry>;
+      static fromOptions(options: ChainEntryOptions, prev: ChainEntry);
+      getProof(): BN;
+      getChainwork(prev: ChainEntry): BN;
+      isGenesis(): boolean;
+      hasUnknown(network: Network): boolean;
+      hasBit(bit: number): boolean;
+      /**
+       * Get little-endian block hash.
+       */
+      rhash(): HashKey;
+      fromBlock(block: Block | MerkleBlock, prev?: ChainEntry): ChainEntry;
+      static fromBlock(
+        block: Block | MerkleBlock,
+        prev?: ChainEntry
+      ): ChainEntry;
+      toRaw(): Buffer;
+      fromRaw(data: Buffer): ChainEntry;
+      static fromRaw(data: Buffer): ChainEntry;
+      toJSON(): object;
+      fromJSON(json: Object): ChainEntry;
+      static fromJSON(json: Object): ChainEntry;
+      toHeaders(): Headers;
+      toInv(): InvItem;
+      inspect(): object;
+      static isChainEntry(obj: object): boolean;
+    }
+
+    export interface ChainEntryOptions {
+      hash: HashKey;
+      version: number;
+      prevBlock: string;
+      merkleRoot: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      height: number;
+      chainwork: BN;
+    }
   }
 
   export type Chain = blockchain.Chain;
@@ -115,7 +331,12 @@ declare module 'bcoin' {
   export type Mnemonic = hd.Mnemonic;
 
   export namespace mempool {
-    export class Fees {}
+    export class Fees {
+      public options: MempoolOptions;
+      constructor(options: MempoolOptions);
+    }
+
+    export class MempoolOptions {}
 
     export class Mempool {}
 
@@ -234,8 +455,92 @@ declare module 'bcoin' {
   export class SPVNode extends node.SPVNode {}
 
   export namespace primitives {
-    export class Address {}
+    export class Address {
+      type: AddressTypeNum;
+      version: number;
+      hash: Buffer;
+      constructor(options?: Partial<AddressOptions>);
+      fromOptions(options: AddressOptions);
+      static fromOptions(options: AddressOptions);
+      public getHash(enc?: 'hex' | 'null'): Buffer;
+      public isNull(): boolean;
+      public equals(addr: Address): boolean;
+      public getType(): AddressTypeLowerCase;
+      /**
+       * get network address prefix
+       * @param network
+       */
+      public getPrefix(network?: Network | NetworkType): number;
+      public getSize(): number;
+      public toRaw(network?: Network | NetworkType): Buffer;
+      public toBase58(network?: Network | NetworkType): string;
+      public toBech32(network?: Network | NetworkType): string;
+      public fromString(addr: string, network?: Network | NetworkType): Address;
+      static fromString(addr: string, network?: Network | NetworkType): Address;
+      public toString(network?: Network | NetworkType): string;
+      inspect(): string;
+      fromRaw(data: Buffer, network?: Network | NetworkType): Address;
+      static fromRaw(data: Buffer, network?: Network | NetworkType): Address;
+      static fromBase58(data: string, network?: Network): Address;
+      static fromBech32(data: string, network?: Network): Address;
+      /**
+       * From output script
+       */
+      private fromScript(script: Script): Address | null;
+      private fromWitness(witness: Witness): Address | null;
+      private fromInputScript(script: Script): Address | null;
+      static fromScript(script: Script): Address | null;
+      static fromWitness(witness: Witness): Address | null;
+      static fromInputScript(script: Script): Address | null;
+      private fromHash(
+        hash: Buffer,
+        type: AddressType,
+        version: number
+      ): Address;
+      static fromHash(
+        hash: Buffer,
+        type: AddressType,
+        version: number
+      ): Address;
+      private fromPubkeyhash(hash: Buffer): Address;
+      static fromPubkeyhash(hash: Buffer): Address;
+      private fromScripthash(hash: Buffer): Address;
+      static fromScripthash(hash: Buffer): Address;
+      private fromWitnessPubkeyhash(hash: Buffer): Address;
+      static fromWitnessPubkeyhash(hash: Buffer): Address;
+      private fromWitnessScripthash(hash: Buffer): Address;
+      static fromWitnessScripthash(hash: Buffer): Address;
+      private fromProgram(version: number, hash: Buffer): Address;
+      static fromProgram(version: number, hash: Buffer): Address;
+      public isPubkeyhash(): boolean;
+      public isScriptHash(): boolean;
+      public isWitnessPubkeyhash(): boolean;
+      public isWitnessScripthash(): boolean;
+      public isUnknown(): boolean;
+
+      static getHash(
+        data: string | Address | Buffer,
+        enc?: string,
+        network?: Network
+      ): Buffer;
+      static getType(prefix: number, network: Network): AddressTypeNum;
+    }
+
+    export type AddressOptions =
+      | { hash: Buffer | string; type: AddressType; version?: number }
+      | string;
+
+    export type AddressType = AddressTypeNum | AddressTypeVal;
+
+    export type AddressTypeNum =
+      | 0 // PUBKEYHASH
+      | 1 // SCRIPTHASH
+      | 2; // WITNESS
+    export type AddressTypeVal = 'PUBKEYHASH' | 'SCRIPTHASH' | 'WITNESS';
+    export type AddressTypeLowerCase = 'pubkeyhash' | 'scripthash' | 'witness';
     export class Block {}
+
+    export class TXMeta {}
 
     export class Coin {}
 
@@ -888,7 +1193,10 @@ declare module 'bcoin' {
       export type isCompressedEncoding = (key: Buffer) => boolean;
       export type isSignatureEncoding = (sig: Buffer) => boolean;
     }
-    export class Opcode {}
+    export class Opcode {
+      constructor(value?: number, data?: Buffer);
+      isMinimal(): boolean;
+    }
 
     export class Program {}
 
