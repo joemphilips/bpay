@@ -58,10 +58,7 @@ export class HTTP extends Server {
 
   // private initSockets() {}
   private initApp() {
-    const appDir = path.join(__dirname, '../../../public/build/index.html');
-    // tslint:disable no-console
-    // console.log('appDir');
-    // console.log(appDir);
+    const appDir = path.join(__dirname, '../../../public/build');
     this.use('/app', this.fileServer(appDir));
   }
 }

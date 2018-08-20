@@ -3,7 +3,7 @@ import anyTest, { ExecutionContext, TestInterface } from 'ava';
 import { Plugin as Bpay } from './plugin';
 import { WalletClient, NodeClient } from 'bclient';
 import { ConfigOption } from 'bcfg';
-import { TextDecoder } from 'util';
+import Request from 'brq';
 
 const sleep = (msec: number) =>
   new Promise(resolve => setTimeout(resolve, msec));
@@ -31,6 +31,12 @@ const bpayWalletNode = new wallet.Node({
   adminToken: ADMIN_TOKEN,
   plugins: [Bpay]
 });
+
+const commonRequestOption = {
+  method: 'GET',
+  host: '127.0.0.1',
+  port: network.walletPort
+};
 
 interface HTTPTestContext {
   [key: string]: any;
@@ -70,10 +76,8 @@ test('Chain node should respond by info', async (t: ExecutionContext<
   t.is(info.network, 'regtest');
 });
 
-/*
-test('BPay should respond ', async (t: ExecutionContext<
-  HTTPTestContext
->) => {
-  const result = await t.context.
+test('BPay should respond ', async (t: ExecutionContext<HTTPTestContext>) => {
+  const result = await Request({ ...commonRequestOption, path: '/bpay/app' });
+  const isError = result.text().match('Error');
+  t.falsy(isError, 'html response should not include Error');
 });
-*/

@@ -16,13 +16,14 @@ declare module 'bcoin' {
   import { Lock } from 'bmutex';
   import Config, { ConfigOption } from 'bcfg';
   import LRU from 'blru';
-  export interface BcoinPlugin {
-    init(node: Node): BcoinPluginInstance;
+
+  export abstract class BcoinPlugin {
+    static init(node: Node): BcoinPluginInstance;
   }
 
-  export interface BcoinPluginInstance {
-    open(): Promise<void>;
-    close(): Promise<void>;
+  export abstract class BcoinPluginInstance {
+    public open(): Promise<void>;
+    public close(): Promise<void>;
   }
 
   type SighashType = 'ALL' | 'NONE' | 'SINGLE' | 1 | 2 | 3 | 0x08;
@@ -561,12 +562,25 @@ declare module 'bcoin' {
 
     export class CoinEntry {}
 
-    export class CoinView {}
+    export class CoinView extends BufferMap {
+      public map: BufferMap;
+      public undo: UndoCoins;
+      constructor();
+      ensure(hash: HashKey): Coins;
+      remove(hash: HashKey): Coins | null;
+      addTX(tx: TX, height: number): Coins;
+      removeTX(tx: TX, height: number): Coins;
+      addEntry(prevout: Outpoint, coin: CoinEntry): CoinEntry | null;
+      addCoin(coin: Coin): CoinEntry | null;
+      addOutput(prevout: Outpoint, output: Output): CoinEntry | null;
+    }
+    export class UndoCoins {}
   }
 
-  export type Coins = coins.Coins;
-  export type CoinEntry = coins.CoinEntry;
-  export type CoinView = coins.CoinView;
+  export class Coins extends coins.Coins {}
+  export class CoinEntry extends coins.CoinEntry {}
+  export class CoinView extends coins.CoinView {}
+  export class UndoCoins extends coins.UndoCoins {}
 
   export namespace hd {
     export class HDPrivateKey {}
