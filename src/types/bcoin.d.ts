@@ -40,7 +40,7 @@ declare module 'bcoin' {
    * is supposed to represent that type going to change.
    * refs: https://github.com/bcoin-org/bcoin/issues/533
    */
-  type HashKey = string;
+  type HashKey = Buffer;
   export namespace blockchain {
     export class Chain extends AsyncEmitter {
       opened: boolean;
@@ -604,14 +604,95 @@ declare module 'bcoin' {
   export type Mnemonic = hd.Mnemonic;
 
   export namespace mempool {
-    export class Fees {
-      public options: MempoolOptions;
-      constructor(options: MempoolOptions);
+    class ConfirmStats {
+      type: string;
+      decay: number;
+      maxConfirms: number;
+      buckets: Float64Array;
+      bucketMap: DoubleMap;
+      confAvg: number[];
+      curBlockConf: number[];
+      unconfTX: number[];
+      oldUnconfTx: Int32Array;
+      curBlockTX: Int32Array;
+      txAvg: Float64Array;
+      curBlockVal: Float64Array;
+      avg: Float64Array;
+      logger?: LoggerContext;
+      constructor(type: string, logger?: Logger);
+      init(buckets: any[], maxConfirms: number, decay: number);
+      clearCurrent(height: number): void;
+      record(blocks: number, val: Rate | number): void;
+      updateAverages(): void;
+      estimateMedian(
+        target: number,
+        needed: number,
+        breakpoint: number,
+        greater: boolean,
+        height: number
+      ): Rate | number;
+      addTX(height: number, val: number): number;
+      removeTX(
+        entryHeight: number,
+        bestHeight: number,
+        bucketIndex: number
+      ): void;
+      getSize(): number;
+      toRaw(): Buffer;
+      fromRaw(data: Buffer): ConfirmStats;
+      static fromRaw(data: Buffer, type: string, logger?: Logger): ConfirmStats;
     }
+
+    class DoubleMap {
+      public buckets: any[][];
+      constructor();
+      insert(key, value): void;
+      search(key: string): any;
+    }
+    class PolicyEstimator {
+      static VERSION: number;
+      public options: MempoolOptions;
+      logger: Logger;
+      minTrackedFee: number;
+      minTrackedPri: number;
+      feeStats: ConfirmStats;
+      priStats: ConfirmStats;
+
+      feeUnlikely: number;
+      feeLikely: number;
+      priUnlikely: number;
+      priLikely: number;
+      map: BufferMap;
+      bestHeight: number;
+      constructor(logger?: Logger);
+      private init(): void;
+      private reset(): void;
+      private removeTX(hash: HashKey): void;
+      isFeePoint(fee: Amount, priority: number): boolean;
+      isPriPoint(fee: Amount, priority: number): boolean;
+      processTX(entry: MempoolEntry, current: boolean): void;
+      processBlockTX(height: number, entry: MempoolEntry): void;
+      processBlock(
+        height: number,
+        entries: MempoolEntry[],
+        current: boolean
+      ): void;
+      estimateFee(target: number, smart: boolean): Rate;
+      estimatePriority(target: number, smart: boolean): number;
+      getSize(): number;
+      toRaw(): Buffer;
+      fromRaw(data: Buffer): ConfirmStats;
+      static fromRaw(data: Buffer, logger?: Logger): ConfirmStats;
+      inject(estimator: PolicyEstimator): PolicyEstimator;
+    }
+
+    export class Fees extends PolicyEstimator {}
 
     export class MempoolOptions {}
 
-    export class Mempool {}
+    export class Mempool {
+      constructor(options: MempoolOptions);
+    }
 
     export class MempoolEntry {}
   }
