@@ -3,8 +3,9 @@
 // Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 
 declare module 'bcoin' {
-  import { BufferWriter, BufferReader } from 'bufio';
   import { BloomFilter } from 'bfilter';
+  import { BufferWriter, BufferReader } from 'bufio';
+  import { BufferMap } from 'buffer-map';
   import BN from 'bn.js';
   import AsyncEmitter from 'bevent';
   import { EventEmitter } from 'events';
@@ -41,15 +42,245 @@ declare module 'bcoin' {
   type HashKey = string;
   export namespace blockchain {
     export class Chain extends AsyncEmitter {
+      opened: boolean;
+      options: ChainOptions;
+      network: Network;
+      logger: LoggerContext;
+      workers?: WorkerPool;
+      db: ChainDB;
+
+      locker: Lock;
+      invalid: LRU;
+      state: DeploymentState;
+
+      tip: ChainEntry;
+      height: number;
+      synced: boolean;
+
+      orphanMap: BufferMap;
+      orphanPrev: BufferMap;
+
       constructor(options?: Partial<ChainOptions>);
+      open(): Promise<void>;
+      close(): Promise<void>;
+      private verifyContext(
+        block: Block,
+        prev: ChainEntry,
+        flags: number
+      ): Promise<ContextResult>;
+      /**
+       * perform all necessary contextual verification on a block,
+       * excepts for PoW check.
+       * @param block
+       */
+      public verifyBlock(block: Block): Promise<ContextResult>;
+      public isMainHash(hash: HashKey): Promise<boolean>;
+      isMainChain(entry: ChainEntry): Promise<boolean>;
+      getAncestor(
+        entry: ChainEntry,
+        height: number
+      ): Promise<ChainEntry | null>;
+      getPrevious(entry: ChainEntry): Promise<ChainEntry | null>;
+      getPrevCache(entry: ChainEntry): Promise<ChainEntry | null>;
+      getNext(entry: ChainEntry): Promise<ChainEntry | null>;
+      getNextEntry(entry: ChainEntry): Promise<ChainEntry | null>;
+      getMedianTime(prev: ChainEntry, time?: number): Promise<number>;
+      /**
+       * returns true if entry is an ancestor of a checkpoint.
+       * @param prev
+       */
+      isHistorical(prev: ChainEntry): Promise<boolean>;
+      private verify(
+        block: Block,
+        prev: ChainEntry,
+        flags: number
+      ): Promise<DeploymentState>;
+      public getDeployments(
+        time: number,
+        prev: ChainEntry
+      ): Promise<DeploymentState>;
+      private setDeploymentState(state: DeploymentState): void;
+      private verifyDuplicates(block: Block, prev: ChainEntry): Promise<void>;
+      private updateInputs(block: Block, prev: ChainEntry): Promise<CoinView>;
+      /**
+       * Perform contextual check to block transactions.
+       * @param block
+       * @param prev
+       * @param state
+       */
+      private verifyInputs(
+        block: Block,
+        prev: ChainEntry,
+        state: DeploymentState
+      ): Promise<CoinView>;
+      /**
+       * Find common ancestor block for two blocks
+       */
+      private findFork(
+        fork: ChainEntry,
+        longer: ChainEntry
+      ): Promise<ChainEntry>;
+
+      /**
+       * Called from setBestChain
+       * @param competitor
+       */
+      private reorganize(competitor: ChainEntry): Promise<void>;
+      private setBestChain(
+        entry: ChainEntry,
+        block: Block,
+        prev: ChainEntry,
+        flags: number
+      ): Promise<void>;
+      private saveAlternate(
+        entry: ChainEntry,
+        block: Block,
+        prev: ChainEntry,
+        flags: number
+      ): Promise<void>;
+      public reset(block: HashKey | number): Promise<void>;
+      public replay(block: HashKey | number): Promise<void>;
+      public invalidate(hash: HashKey): Promise<void>;
+      public prune(): Promise<void>;
+      public scan(
+        start: HashKey,
+        filter: BloomFilter,
+        iter: ScanIterator
+      ): Promise<void>;
+      public add(block: Block, flags?: number, id?: number): Promise<void>;
+      private connect(
+        prev: ChainEntry,
+        block: Block,
+        flags: number
+      ): Promise<ChainEntry>;
+      public getProgress(): number;
+      /**
+       * Calculate chain locator (array of hashes).
+       * @param start - Height or hash to treat as the tip.
+       * The current tip will be used if not present.
+       */
+      public getLocator(start?: HashKey): Promise<HashKey[]>;
+      public getOrphanRoot(hash: HashKey): HashKey;
+      public getProofTime(to: ChainEntry, from: ChainEntry): number;
+      public getCurrentTarget(): Promise<number>;
+      public getTarget(time: number, prev: ChainEntry): Promise<number>;
+      public retarget(prev: ChainEntry, first: ChainEntry): number;
+      /**
+       * Equivalent to `FindForkInGlobalIndex()` in bitcoind
+       * @param locator
+       */
+      public findLocator(locator: HashKey[]): Promise<HashKey>;
+
+      // -------- bip9 related methods ---------
+      /**
+       * Check whether a versionbits deployment is active
+       * @param prev
+       * @param deployment
+       * @example
+       * await chain.isActive(tip, deployments.segwit);
+       */
+      public isActive(prev: ChainEntry, deployment: string): Promise<boolean>;
+      /**
+       * get bip9 state
+       * 1. defined
+       * 2. started
+       * 3. locked_in
+       * 4. active
+       * 5. failed
+       */
+      public getState(
+        prev: ChainEntry,
+        deployment: string
+      ): Promise<common.thresholdStates>;
+      /**
+       * Compute the version for a new block (BIP9: versionbits)
+       * @param prev
+       */
+      public computeBlockVersion(
+        prev: ChainEntry
+      ): Promise<common.thresholdStates>;
+      private getDeploymentState(): Promise<DeploymentState>;
+      /**
+       * check finality of transaction by calling tx.isFinal()
+       * which examines nLocktime an nSequence
+       * @param prev
+       * @param tx
+       * @param flags
+       */
+      public verifyFinal(
+        prev: ChainEntry,
+        tx: TX,
+        flags: common.lockFlags
+      ): Promise<boolean>;
+      /**
+       * @returns Array - tuple of minimum time and sequence of locks for tx
+       *
+       */
+      private getLocks(
+        prev: ChainEntry,
+        tx: TX,
+        view: CoinView,
+        flags: common.lockFlags
+      ): Promise<[number, number]>;
+      /**
+       * verify sequence locks
+       */
+      public verifyLocks(
+        prev: ChainEntry,
+        tx: TX,
+        view: CoinView,
+        flags: common.lockFlags
+      ): Promise<boolean>;
     }
 
-    interface ChainOptions {
+    export namespace common {
+      /**
+       * flags for timelock verification.
+       */
+      export enum lockFlags {
+        VERIFY_SEQUENCE = 1,
+        MEDIAN_TIME_PAST = 2
+      }
+
+      /**
+       * BIP9 threshold
+       */
+      export enum thresholdStates {
+        DEFINED = 0,
+        STARTED = 1,
+        LOCKED_IN = 2,
+        ACTIVE = 3,
+        FAILED = 4
+      }
+
+      export enum flags {
+        VERIFY_NONE = 0,
+        VERIFY_POW = 1,
+        VERIFY_BODY = 2
+      }
+    }
+
+    export class VerifyError extends Error {}
+
+    type ContextResult = [CoinView, DeploymentState];
+
+    type ChainOptions = {
       network: Network;
       logger: Logger;
       workers?: WorkerPool;
       prefix?: string;
       location?: string;
+      memory?: boolean;
+    } & ChainDBOptions;
+
+    class DeploymentState {
+      flags: number;
+      lockFlags: common.lockFlags;
+      bip34: boolean;
+      bip91: boolean;
+      bip148: boolean;
+      constructor();
+      [key: string]: any;
     }
 
     export class ChainDB {
@@ -190,6 +421,25 @@ declare module 'bcoin' {
         block: Block,
         view?: CoinView
       ): Promise<Block>;
+      private removeBlock(entry: ChainEntry): Promise<Block>;
+      private saveView(view: CoinView): Promise<void>;
+      private connectBlock(
+        entry: ChainEntry,
+        block: Block,
+        view: CoinView
+      ): Promise<Block>;
+      private disconnectBlock(
+        entry: ChainEntry,
+        block: Block
+      ): Promise<CoinView>;
+      private pruneBlock(entry): Promise<void>;
+      private indexTX(
+        tx: TX,
+        view: CoinView,
+        entry: ChainEntry,
+        index: number
+      ): Promise<void>;
+      private unindexTX(tx: TX, view: CoinView): Promise<void>;
     }
     export type ScanIterator = (entry: ChainEntry, txs: TX[]) => Promise<void>;
 
@@ -227,9 +477,18 @@ declare module 'bcoin' {
       indexAddress: boolean;
     }
 
+    class ChainState {
+      public tip: HashKey;
+      public tx: number;
+      public coin: number;
+      public value: number;
+      public committed: boolean;
+
+      constructor();
+    }
     class StateCache {}
 
-    class ChainState {}
+    class CacheUpdate {}
 
     export class ChainEntry {
       static MAX_CHAIN_WORK: BN;
@@ -1110,38 +1369,38 @@ declare module 'bcoin' {
         0xff: 'OP_INVALIDOPCODE';
       };
 
-      export type flags = {
-        VERIFY_NONE: 0;
-        VERIFY_P2SH: 1;
-        VERIFY_STRICTENC: 2;
-        VERIFY_DERSIG: 4;
-        VERIFY_LOW_S: 8;
-        VERIFY_NULLDUMMY: 16;
-        VERIFY_SIGPUSHONLY: 32;
-        VERIFY_MINIMALDATA: 64;
-        VERIFY_DISCOURAGE_UPGRADABLE_NOPS: 128;
-        VERIFY_CLEANSTACK: 256;
-        VERIFY_CHECKLOCKTIMEVERIFY: 512;
-        VERIFY_CHECKSEQUENCEVERIFY: 1024;
-        VERIFY_WITNESS: 2048;
-        VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM: 4096;
-        VERIFY_MINIMALIF: 8192;
-        VERIFY_NULLFAIL: 16384;
-        VERIFY_WITNESS_PUBKEYTYPE: 32768;
+      export enum flags {
+        VERIFY_NONE = 0,
+        VERIFY_P2SH = 1,
+        VERIFY_STRICTENC = 2,
+        VERIFY_DERSIG = 4,
+        VERIFY_LOW_S = 8,
+        VERIFY_NULLDUMMY = 16,
+        VERIFY_SIGPUSHONLY = 32,
+        VERIFY_MINIMALDATA = 64,
+        VERIFY_DISCOURAGE_UPGRADABLE_NOPS = 128,
+        VERIFY_CLEANSTACK = 256,
+        VERIFY_CHECKLOCKTIMEVERIFY = 512,
+        VERIFY_CHECKSEQUENCEVERIFY = 1024,
+        VERIFY_WITNESS = 2048,
+        VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM = 4096,
+        VERIFY_MINIMALIF = 8192,
+        VERIFY_NULLFAIL = 16384,
+        VERIFY_WITNESS_PUBKEYTYPE = 32768,
         /**
          * Consensus verify flags ... used for block validation.
          */
-        MANDATORY_VERIFY_FLAGS: number;
+        MANDATORY_VERIFY_FLAGS = 1,
         /**
          * Used for mempool validation.
          */
-        STANDARD_VERIFY_FLAGS: number;
+        STANDARD_VERIFY_FLAGS = 65503,
         /**
          * `STANDARD_VERIFY_FLAGS & ~MANDATORY_VERIFY_FLAGS`
         /**
          */
-        ONLY_STANDARD_VERIFY_FLAGS: number;
-      };
+        ONLY_STANDARD_VERIFY_FLAGS = 65502
+      }
 
       export type hashType = {
         ALL: 1;
