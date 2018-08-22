@@ -58,7 +58,7 @@ declare module 'bcoin' {
       height: number;
       synced: boolean;
 
-      orphanMap: BufferMap;
+      orphanMap: BufferMap<Orphan>;
       orphanPrev: BufferMap;
 
       constructor(options?: Partial<ChainOptions>);
@@ -154,6 +154,67 @@ declare module 'bcoin' {
         block: Block,
         flags: number
       ): Promise<ChainEntry>;
+      private handleOrphans(entry: ChainEntry): Promise<void>;
+      private isSlow(): boolean;
+      private logStatus(
+        start: [number, number],
+        block: Block,
+        entry: ChainEntry
+      ): void;
+      private verifyCheckpoint(prev: ChainEntry, hash: Buffer): boolean;
+      private storeOrphan(block: Block, flags?: number, id?: number): void;
+      private addOrphan(orphan: Orphan): Orphan;
+      private removeOrphan(orphan: Orphan): Orphan;
+      private hasNextOrphan(hash: Buffer): Orphan;
+      private resolveOrphan(hash: Buffer): null | Orphan;
+      public purgeOrphans(): null;
+      public limitOrphans(): null;
+      private hasInvalid(block: Block): boolean;
+      private setInvalid(hash: Buffer): void;
+      private removeInvalid(hash: Buffer): void;
+      /**
+       * Search chain (including orphans, invalids) to see if it has a block
+       * @param hash - Block hash
+       */
+      public has(hash: Buffer): Promise<boolean>;
+      public getEntry(hashOrHeight: Buffer | number): ChainEntry | null;
+      public getHash(height: number): Buffer | null;
+      public getHeight(hash: Buffer): number;
+      public hasEntry(hash: Buffer): Promise<boolean>;
+      public getNextHash(hash: Buffer): Promise<Buffer | null>;
+      public hasCoins(tx: TX): Promise<boolean>;
+      public getTips(): Promise<Buffer[]>;
+      public getHashes(start?: number, end?: number): Promise<Buffer[] | null>;
+      private readCoin(prevOut: Outpoint): Promise<CoinEntry | null>;
+      public getCoin(hash: Buffer, index: number): Promise<Coin | null>;
+      public getBlock(hash: Buffer): Promise<Block | null>;
+      public getRawBlock(hash: Buffer): Promise<Buffer | null>;
+      public getBlockView(block: Block): Promise<CoinView>;
+      public getMeta(hash: Buffer): Promise<primitives.TXMeta | null>;
+      public getTX(hash: Buffer): Promise<primitives.TX | null>;
+      public hasTX(hash: Buffer): Promise<boolean>;
+      public getCoinsByAddress(addrs: Address[]): Promise<Coin[] | null>;
+      public getHashesByAddress(addrs: Address[]): Promise<Buffer[] | null>;
+      public getTXByAddress(addrs: Address[]): Promise<TX[] | null>;
+      public getMetaByAddress(
+        addrs: Address[]
+      ): Promise<primitives.TXMeta[] | null>;
+      public getOrphan(hash: Buffer): Block | null;
+      public hasOrphan(hash: Buffer): boolean;
+      public hasPending(hash: Buffer): boolean;
+      public getCoinView(tx: TX): Promise<CoinView>;
+      public getSpentView(tx: TX): Promise<CoinView>;
+      /**
+       * Test the chain if it is fully synced
+       */
+      public isFull(): boolean;
+      /**
+       * Check if chain is synced.
+       * If it is, emit `"full"` event and set `this.synced` to `true`
+       */
+      private maybeSync(): void;
+      public hasChainWork(): boolean
+
       public getProgress(): number;
       /**
        * Calculate chain locator (array of hashes).
@@ -233,6 +294,8 @@ declare module 'bcoin' {
         flags: common.lockFlags
       ): Promise<boolean>;
     }
+
+    class Orphan {}
 
     export namespace common {
       /**
@@ -1303,18 +1366,18 @@ declare module 'bcoin' {
     export class TXJson {}
   }
 
-  export type Address = primitives.Address;
-  export type Block = primitives.Block;
-  export type Coin = primitives.Coin;
-  export type Headers = primitives.Headers;
-  export type Input = primitives.Input;
-  export type InvItem = primitives.InvItem;
-  export type KeyRing = primitives.KeyRing;
-  export type MerkleBlock = primitives.MerkleBlock;
-  export type MTX = primitives.MTX;
-  export type Outpoint = primitives.Outpoint;
-  export type Output = primitives.Output;
-  export type TX = primitives.TX;
+  export class Address extends primitives.Address {}
+  export class Block extends primitives.Block {}
+  export class Coin extends primitives.Coin {}
+  export class Headers extends primitives.Headers {}
+  export class Input extends primitives.Input {}
+  export class InvItem extends primitives.InvItem {}
+  export class KeyRing extends primitives.KeyRing {}
+  export class MerkleBlock extends primitives.MerkleBlock {}
+  export class MTX extends primitives.MTX {}
+  export class Outpoint extends primitives.Outpoint {}
+  export class Output extends primitives.Output {}
+  export class TX extends primitives.TX {}
 
   export namespace protocol {
     export interface consensus {}
@@ -2756,7 +2819,7 @@ declare module 'bcoin' {
       private addBlock(entry: ChainEntry, txs: TX[]): Promise<number>;
       private rescanBlock(entry: ChainEntry, txs: TX[]): Promise<void>;
       public addTX(tx: TX): Promise<null | WID[]>;
-      public resetChain(entry: ChainEntry): Promise<void>
+      public resetChain(entry: ChainEntry): Promise<void>;
     }
 
     export class WalletOptions {
