@@ -12,8 +12,8 @@ declare module 'bcoin' {
   import Logger, { LoggerContext } from 'blgr';
   import * as bweb from 'bweb';
   import * as bclient from 'bclient';
-  import { DB, Batch } from 'bdb';
-  import { Lock } from 'bmutex';
+  import { DB, Batch, DBOptions, Bucket } from 'bdb';
+  import { Lock, MapLock } from 'bmutex';
   import Config, { ConfigOption } from 'bcfg';
   import LRU from 'blru';
 
@@ -544,8 +544,8 @@ declare module 'bcoin' {
     }
   }
 
-  export type Chain = blockchain.Chain;
-  export type ChainEntry = blockchain.ChainEntry;
+  export class Chain extends blockchain.Chain {}
+  export class ChainEntry extends blockchain.ChainEntry {}
 
   export namespace btc {
     export class Amount {}
@@ -903,11 +903,11 @@ declare module 'bcoin' {
     export class MempoolEntry {}
   }
 
-  export type Fees = mempool.Fees;
+  export class Fees extends mempool.Fees {}
 
-  export type Mempool = mempool.Mempool;
+  export class Mempool extends mempool.Mempool {}
 
-  export type MempoolEntry = mempool.MempoolEntry;
+  export class MempoolEntry extends mempool.MempoolEntry {}
 
   export namespace mining {
     export class Miner {}
@@ -1352,8 +1352,8 @@ declare module 'bcoin' {
       rpcPort: number;
       walletPort: number;
       minRelay: number;
-      feeRate: number;
-      maxFeeRate: number;
+      feeRate: Rate;
+      maxFeeRate: Rate;
       selfConnect: boolean;
       requestMempool: boolean;
       time: TimeData;
@@ -1437,8 +1437,8 @@ declare module 'bcoin' {
       rpcPort: number;
       walletPort: number;
       minRelay: number;
-      feeRate: number;
-      maxFeeRate: number;
+      feeRate: Rate;
+      maxFeeRate: Rate;
       selfConnect: boolean;
       requestMempool: boolean;
     }
@@ -1957,9 +1957,9 @@ declare module 'bcoin' {
       private fundLock: Lock;
       static fromOptions(
         wdb: WalletDB,
-        options?: Partial<WalletOptions>
+        options?: Partial<WalletArgument>
       ): Wallet;
-      constructor(wdb: WalletDB, options?: Partial<WalletOptions>);
+      constructor(wdb: WalletDB, options?: Partial<WalletArgument>);
       public init(
         options: AccountOptions,
         passphrase: Passphrase
@@ -2252,7 +2252,7 @@ declare module 'bcoin' {
       public getCoinView(tx): Promise<CoinView>;
       public getSpentView(tx: TX): Promise<CoinView>;
 
-      public toDetails(wtx: TXRecord): Promise<Details>;
+      public toDetails(wtx: records.TXRecord): Promise<Details>;
       /**
        * retrieve tx from txdb before calling `toDetails`
        * @param hash
@@ -2266,7 +2266,7 @@ declare module 'bcoin' {
        * @param tx
        * @param block
        */
-      public add(tx: TX, block: BlockMeta);
+      public add(tx: TX, block: records.BlockMeta);
 
       /**
        * revert wallet state to `height`
@@ -2383,11 +2383,8 @@ declare module 'bcoin' {
     }
 
     interface BalanceJSON {}
-
-    interface TXRecord {}
     interface BlockRecord {}
 
-    interface BlockMeta {}
     interface Details {}
 
     interface Credit {}
@@ -2435,7 +2432,7 @@ declare module 'bcoin' {
       locktime?: number;
     };
 
-    export interface WalletOptions {
+    export interface WalletArgument {
       master: MasterKey | string;
       mnemonic: Partial<hd.MnemonicOptions>;
       wid: WID;
@@ -2477,13 +2474,19 @@ declare module 'bcoin' {
     export class HTTPOptions extends node.HTTPOptions {
       walletAuth: boolean;
     }
+
+    /**
+     * has same API with `WalletClient` but it works for local node.
+     */
+    export class NodeClient {}
+
     /**
      * defined as `WalletClient` internally.
      * client for wallet to communicate with the node
      */
-    export class Client extends bclient.NodeClient {}
+    export class WalletClient extends bclient.NodeClient {}
 
-    export class NodeClient {}
+    export class Client extends WalletClient {}
     export class TXDB {}
     export class MasterKey {}
     export class Account {
@@ -2507,8 +2510,285 @@ declare module 'bcoin' {
     }
     export class WalletKey {}
     export class Path {}
-    export class WalletDB {}
+    export class WalletDB {
+      options: WalletOptions;
+      network: Network;
+      logger: LoggerContext;
+      workers: WorkerPool;
+      client: NodeClient | NullClient;
+      feeRate: Rate;
+      db: DB;
+      primary: null | Wallet; // set when open()'d
+      state: records.ChainState;
+      height: number;
+      wallets: Map<WID, Wallet>;
+      depth: number;
+      rescanning: boolean;
+      filterSent: boolean;
+      readLock: MapLock;
+      writeLock: Lock;
+      filter: BloomFilter;
+      constructor(options?: Partial<WalletOptions> & Partial<DBOptions>);
+      public open(): Promise<void>;
+      /**
+       * Check if this.network and network info saved to db
+       * is consistent.
+       */
+      private verifyNetwork(): Promise<void>;
+      public close(): Promise<void>;
+      public disconnect(): Promise<void>;
+      /**
+       * Set all address hashes and outpoint from db to `this.filter`
+       */
+      private watch(): Promise<void>;
+      private connect(): Promise<void>;
+      /**
+       * Sync state with the node server. Runs
+       * 1. syncState
+       * 2. syncFilter
+       * 3. syncChain
+       * 4. resend
+       * This will start automatically when client has connected to the node.
+       */
+      private syncNode(): Promise<void>;
+      private syncState(): Promise<void>;
+      private migrateState(state: records.ChainState): Promise<void>;
+      private syncChain(): Promise<void>;
+      private scan(height?: number): Promise<void>;
+      /**
+       * Force rescan with a lock.
+       * @param height
+       */
+      public rescan(height: number): Promise<void>;
+      public send(tx: TX): Promise<void>;
+      /**
+       * If `this.feeRate` is greater than 0, return that.
+       * Otherwise asks it to the node.
+       * @param block - confirmation number
+       */
+      public estimateFee(block: number): Promise<Rate>;
+      /**
+       * Send filter to the remote node.
+       */
+      private syncFilter(): Promise<void>;
+      /**
+       * Add filter to the remote node
+       * @param data
+       */
+      private addFilter(data): Promise<void>;
+      /**
+       * Reset remote filter
+       */
+      private resetFilter(): Promise<void>;
+      /**
+       * Backup the wallet db.
+       * @param path
+       */
+      public backup(path: string): Promise<void>;
+      /**
+       * Wipe the txdb
+       */
+      public wipe(): Promise<void>;
+      /**
+       * Get current wallet wid depth (i.e. number of wallet ids hold.)
+       */
+      private getDepth(): Promise<void>;
+      private testFilter(data: Buffer): boolean;
+      private addhash(hash: Buffer): void;
+      private addOutpoint(hash: Buffer, index: number): void;
+      private dump(): Promise<void>;
+      /**
+       * Register an object with the walletdb.
+       * used by this.ensure, this.get, this.create
+       */
+      private register(wallet: Wallet): void;
+      private unregister(wallet: Wallet): void;
+      /**
+       * Convert id to wid.
+       * @param id
+       */
+      private ensureWID(id: string | number): number;
+      /**
+       * Convert wid to id
+       * @param id
+       */
+      private getID(id: string | number): string;
+      public get(id: number | string): Promise<Wallet | null>;
+      public save(b: DB | Batch, wallet: Wallet);
+      public increment(b: Batch, wid: WID): void;
+      public rename(wallet: Wallet, id: string): Promise<void>;
+      public renameAccount(b: Batch | DB, account: Account, name: string): void;
+      /**
+       * Remove wallet.
+       * @param id
+       */
+      public remove(id: number | string): Promise<void>;
+      /**
+       * Get wallet with token auth first
+       */
+      public auth(id: number | string, token: Buffer): Promise<Wallet | null>;
+      /**
+       * Create a new wallet
+       * Throws error if already exists.
+       * @param options
+       */
+      public create(options: Partial<WalletOptions>): Promise<Wallet>;
+      public has(id: number | string): Promise<boolean>;
+      /**
+       * Create a new wallet.
+       * return the wallet if already exists.
+       * @param options
+       */
+      public ensure(options: Partial<WalletOptions>): Promise<Wallet>;
+      private getAccount(wid: WID, index: number): Promise<Account | null>;
+      /**
+       * Get all accounts name
+       * @param wid
+       */
+      public getAccounts(wid: WID): string[];
+      public getAccountIndex(wid: WID, name: string): Promise<number>;
+      public getAccountName(wid: WID, index: number): Promise<string>;
+      public saveAccount(b: Batch | DB, account: Account): Promise<void>;
+      public hasAccount(wid: WID, acctIndex: number): Promise<boolean>;
+      /**
+       * Save addresses to path map.
+       * @param b
+       * @param wallet
+       * @param ring
+       */
+      public saveKey(
+        b: DB | Batch,
+        wallet: Wallet,
+        ring: WalletKey
+      ): Promise<void>;
+      public savePath(b: DB | Batch, wid: WID, path: string): Promise<void>;
+      public getPath(wid: WID, hash: Buffer): Promise<Path | null>;
+      public readPath(wid: number, hash: Buffer): Promise<Path>;
+      public hasPath(wid: WID, hash: Buffer): Promise<boolean>;
+      /**
+       * Get all address hashes.
+       */
+      public getHashes(): Promise<Buffer[]>;
+      /**
+       * Get all Outpoints.
+       */
+      public getOutpoints(): Promise<Outpoint[]>;
+      /**
+       * Get all address hashes for wallet
+       */
+      public getWalletHashes(wid: WID): Promise<Buffer[]>;
+      public getAccountHashes(
+        wid: WID,
+        accountIndex: number
+      ): Promise<Buffer[]>;
+      public getWalletPaths(wid: WID): Promise<Path[]>;
+      public getWallets(): Promise<WID[]>;
+      public encryptKeys(b: Bucket | DB, wid: WID, key: Buffer): Promise<void>;
+      public decryptKeys(b: Bucket | DB, wid: WID, key: Buffer): Promise<void>;
+      /**
+       * resend every pending tx.
+       * @param wid
+       */
+      public resend(): Promise<void>;
+      /**
+       * resend every pending tx for specific wallet.
+       * @param wid
+       */
+      private resendPending(wid: WID): Promise<void>;
+      public getWalletsByTX(tx: Buffer): Promise<WID[] | null>;
+      public getState(): Promise<null | records.ChainState>;
+      public setTip(tip: records.BlockMeta): Promise<void>;
+      private markState(block: records.BlockMeta): Promise<void>;
 
+      // ----- MapRecord related methods ------
+      private getMap(key: Buffer): Promise<null | records.MapRecord>;
+      private addMap(
+        b: DB | Bucket | Batch,
+        key: Buffer,
+        wid: WID
+      ): Promise<void>;
+      private removeMap(
+        b: DB | Bucket | Batch,
+        key: Buffer,
+        wid: WID
+      ): Promise<void>;
+      private getPathMap(hash: Buffer): Promise<records.MapRecord | null>;
+      private addPathMap(
+        b: DB | Bucket | Batch,
+        key: Buffer,
+        wid: WID
+      ): Promise<void>;
+
+      private addTXMap(b: DB | Bucket | Batch, hash: Buffer, key: Buffer);
+      private addPathMap(
+        b: DB | Bucket | Batch,
+        hash: Buffer,
+        wid: WID
+      ): Promise<void>;
+      private addBlockMap(
+        b: DB | Bucket | Batch,
+        height: number,
+        wid: WID
+      ): Promise<void>;
+      private removeBlockMap(
+        b: DB | Bucket | Batch,
+        height: Buffer,
+        wid: WID
+      ): Promise<void>;
+      private getTXMap(hash: Buffer): Promise<null | records.MapRecord>;
+      // TODO: skipping a few of methods here ...
+      // -------------------
+
+      private getBlock(height: Buffer): Promise<null | records.BlockMeta>;
+      public getTip(): Promise<records.BlockMeta>;
+      private rollback(height: number): Promise<void>;
+      /**
+       * Revert txdb to older state
+       * @param target
+       */
+      private revert(target: number): Promise<void>;
+      /**
+       *
+       * @param entry
+       * @param txs
+       * @returns - number of TX added
+       */
+      private addBlock(entry: ChainEntry, txs: TX[]): Promise<number>;
+      private rescanBlock(entry: ChainEntry, txs: TX[]): Promise<void>;
+      public addTX(tx: TX): Promise<null | WID[]>;
+      public resetChain(entry: ChainEntry): Promise<void>
+    }
+
+    export class WalletOptions {
+      network: Network;
+      logger: Logger;
+      workers?: WorkerPool;
+      client?: NodeClient;
+      feeRate?: number;
+      prefix?: string;
+      location?: string;
+      memory: boolean;
+      maxFiles: number;
+      cacheSize: number;
+      compression: boolean;
+      spv: boolean;
+      witness: boolean;
+      checkponts: boolean;
+      wipeNoReally: boolean;
+      constructor(options?: Partial<WalletOptions>);
+      static fromOptions(options: Partial<WalletOptions>);
+    }
+
+    class NullClient {}
+
+    export namespace records {
+      export class ChainState {}
+      export class BlockMeta {}
+
+      export class TXRecord {}
+
+      export class MapRecord {}
+    }
     /**
      * type emitted by walletdb
      */
@@ -2516,11 +2796,11 @@ declare module 'bcoin' {
     export type WalletEvent = 'address';
   }
 
-  export type Wallet = wallet.Wallet;
+  export class Wallet extends wallet.Wallet {}
 
-  export type Path = wallet.Path;
-  export type WalletKey = wallet.WalletKey;
-  export type WalletDB = wallet.WalletDB;
+  export class Path extends wallet.Path {}
+  export class WalletKey extends wallet.WalletKey {}
+  export class WalletDB extends wallet.WalletDB {}
 
   /// ------ worker ------
 
@@ -2632,14 +2912,15 @@ declare module 'bcoin' {
       enabled: boolean;
       /**
        * Number of cpu core to use.
+       * Default is all available cors in machine.
        */
-      size: number;
-      timeout: number;
+      size?: number;
+      timeout?: number;
       /**
        * defaults to `bcoin/lib/workers/worker.js`
        * You can configure this by `BCOIN_WORKER_FILE`
        */
-      file: string;
+      file?: string;
     }
 
     interface Worker {}
