@@ -40,8 +40,9 @@ declare module 'blgr' {
     private memory(): object;
   }
   export interface LoggerOptions {
-    level?: string | number;
+    level?: string;
     colors?: boolean;
+    console?: boolean;
     shrink?: boolean;
     closed?: boolean;
     closing?: boolean;

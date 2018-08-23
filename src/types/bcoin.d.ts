@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 // Type definitions for bcoin 1.0.2
 // Project: https://github.com/bcoin-org/bweb
 // Definitions by: Joe Miyamoto <joemphilips@gmail.com>
@@ -213,7 +215,7 @@ declare module 'bcoin' {
        * If it is, emit `"full"` event and set `this.synced` to `true`
        */
       private maybeSync(): void;
-      public hasChainWork(): boolean
+      public hasChainWork(): boolean;
 
       public getProgress(): number;
       /**
@@ -646,9 +648,53 @@ declare module 'bcoin' {
   export class UndoCoins extends coins.UndoCoins {}
 
   export namespace hd {
-    export class HDPrivateKey {}
+    export type HDKey = HDPrivateKey | HDPublicKey;
+    type PrivateKeyJson = { xprivkey: string; [key: string]: any };
+    type PublicKeyJson = { xpubkey: string; [key: string]: any };
+    export function fromBase58(xkey: string, network: Network): HDKey;
+
+    export function generate(): HDPrivateKey;
+
+    export function fromSeed(options: Buffer): HDPrivateKey;
+    export function fromMnemonic(options: Mnemonic): HDPrivateKey;
+    export function fromJSON(json: PrivateKeyJson | PublicKeyJson): HDKey;
+    export function fromRaw(data: Buffer, network?: Network): HDKey;
+    export function from(
+      options: Mnemonic | MnemonicOptions | string | Buffer
+    ): HDKey;
+
+    export function isPrivate(obj: object): boolean;
+
+    export function isPublic(obj: object): boolean;
+
+    export type wordlist = ReadonlyArray<string>;
+    export class HDPrivateKey {
+      depth: number;
+      parentFingerPrint: number;
+      childIndex: number;
+      chainCode: Buffer;
+      privateKey: Buffer;
+      publicKey: Buffer;
+      fingerPrint: number;
+      constructor(options?: PrivateKeyOption);
+      fromSeed(seed: Buffer);
+      static fromOptions(options: PrivateKeyOption): HDPrivateKey;
+      toPublic(): HDPublicKey;
+    }
+
+    interface PrivateKeyOption {
+      depth: number;
+      parentFingerPrint: number;
+      childIndex: number;
+      chainCode: Buffer;
+      privateKey: Buffer;
+    }
+
+    export class PrivateKey extends HDPrivateKey {}
 
     export class HDPublicKey {}
+
+    export class PublicKey extends HDPublicKey {}
 
     export class Mnemonic {}
 
@@ -660,11 +706,11 @@ declare module 'bcoin' {
     }
   }
 
-  export type HDPrivateKey = hd.HDPrivateKey;
+  export class HDPrivateKey extends hd.HDPrivateKey {}
 
-  export type HDPublicKey = hd.HDPublicKey;
+  export class HDPublicKey extends hd.HDPublicKey {}
 
-  export type Mnemonic = hd.Mnemonic;
+  export class Mnemonic extends hd.Mnemonic {}
 
   export namespace mempool {
     class ConfirmStats {
@@ -1361,7 +1407,34 @@ declare module 'bcoin' {
 
     export class Output {}
 
-    export class TX {}
+    export class TX {
+      public version: number;
+      public inputs: Input[];
+      public outputs: Output[];
+      public locktime: number;
+      public mutabjle: boolean;
+      constructor(option: TXOption);
+      clone(): TX;
+      inject(tx: TX): TX;
+      refresh(): null;
+      createHash(enc?: 'hex'): Buffer;
+      witnessHash(enc?: string): Buffer;
+      /**
+       * This will result to the witness serialization format
+       * if witness is present.
+       */
+      toRaw(): Buffer;
+      toNormal(): Buffer;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toNormalWriter(bw: BufferWriter): BufferWriter
+    }
+
+    export interface TXOption {
+      version?: number;
+      input?: number;
+      outputs?: Output[];
+      locktime?: number;
+    }
 
     export class TXJson {}
   }
