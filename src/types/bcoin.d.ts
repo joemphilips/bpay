@@ -1,5 +1,3 @@
-import { createHash } from 'crypto';
-
 // Type definitions for bcoin 1.0.2
 // Project: https://github.com/bcoin-org/bweb
 // Definitions by: Joe Miyamoto <joemphilips@gmail.com>
