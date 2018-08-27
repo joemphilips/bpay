@@ -1023,17 +1023,242 @@ declare module 'bcoin' {
   export type Miner = mining.Miner;
 
   export namespace net {
-    export interface packets {}
+    export interface packets {
+      types: {
+        VERSION: 0;
+        VERACK: 1;
+        PING: 2;
+        PONG: 3;
+        GETADDR: 4;
+        ADDR: 5;
+        INV: 6;
+        GETDATA: 7;
+        NOTFOUND: 8;
+        GETBLOCKS: 9;
+        GETHEADERS: 10;
+        HEADERS: 11;
+        SENDHEADERS: 12;
+        BLOCK: 13;
+        TX: 14;
+        REJECT: 15;
+        MEMPOOL: 16;
+        FILTERLOAD: 17;
+        FILTERADD: 18;
+        FILTERCLEAR: 19;
+        MERKLEBLOCK: 20;
+        FEEFILTER: 21;
+        SENDCMPCT: 22;
+        CMPCTBLOCK: 23;
+        GETBLOCKTXN: 24;
+        BLOCKTXN: 25;
+        UNKNOWN: 26;
+        // Internal
+        INTERNAL: 27;
+        DATA: 28;
+      };
+      typesByVal: Array<string>;
+      // Packet: Packet;
+      VersionPacket: VersionPacket;
+      VerackPacket: VerackPacket;
+      PingPacket: PingPacket;
+      PongPacket: PongPacket;
+      GetAddrPacket: GetAddrPacket;
+      AddrPacket: AddrPacket;
+      InvPacket: InvPacket;
+      GetDataPacket: GetDataPacket;
+      NotFoundPacket: NotFoundPacket;
+      GetBlocksPacket: GetBlocksPacket;
+      GetHeadersPacket: GetHeadersPacket;
+      HeadersPacket: HeadersPacket;
+      SendHeadersPacket: SendHeadersPacket;
+      BlockPacket: BlockPacket;
+      TXPacket: TXPacket;
+      RejectPacket: RejectPacket;
+      MempoolPacket: MempoolPacket;
+      FilterLoadPacket: FilterLoadPacket;
+      FilterAddPacket: FilterAddPacket;
+      FilterClearPacket: FilterClearPacket;
+      MerkleBlockPacket: MerkleBlockPacket;
+      FeeFilterPacket: FeeFilterPacket;
+      SendCmpctPacket: SendCmpctPacket;
+      CmpctBlockPacket: CmpctBlockPacket;
+      GetBlockTxnPacket: GetBlocksPacket;
+      BlockTxnPacket: GetBlockTxnPacket;
+
+      fromRaw: (cmd?: PacketTypeLower, data?: Buffer) => Packet;
+    }
+
+    type PacketTypeLower =
+      | 'version'
+      | 'verack'
+      | 'ping'
+      | 'pong'
+      | 'getaddr'
+      | 'addr'
+      | 'inv'
+      | 'getdata'
+      | 'notfound'
+      | 'getblocks'
+      | 'getheaders'
+      | 'headers'
+      | 'sendheaders'
+      | 'block'
+      | 'tx'
+      | 'reject'
+      | 'mempool'
+      | 'filterload'
+      | 'filteradd'
+      | 'filterclear'
+      | 'merkleblock'
+      | 'feefilter'
+      | 'sendcmpct'
+      | 'cmpctblock'
+      | 'getblocktxn';
+
+    class Packet {
+      type: number;
+      cmd: string;
+      constructor();
+      getSize(): number;
+      roWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer;
+      fromReader(): any;
+      fromRaw(data: Buffer): any;
+    }
+
+    class VersionPacket extends Packet {
+      constructor(options?: object);
+    }
+
+    class VerackPacket extends Packet {
+      constructor(options?: object);
+    }
+    class PingPacket extends Packet {
+      constructor(options?: object);
+    }
+    class PongPacket extends Packet {
+      constructor(options?: object);
+    }
+    class GetAddrPacket extends Packet {
+      constructor(options?: object);
+    }
+    class AddrPacket extends Packet {
+      constructor(options?: object);
+    }
+    class InvPacket extends Packet {
+      constructor(options?: object);
+    }
+    class GetDataPacket extends Packet {
+      constructor(options?: object);
+    }
+    class NotFoundPacket extends Packet {
+      constructor(options?: object);
+    }
+    class GetBlocksPacket extends Packet {
+      constructor(options?: object);
+    }
+    class GetHeadersPacket extends Packet {
+      constructor(options?: object);
+    }
+    class HeadersPacket extends Packet {
+      constructor(options?: object);
+    }
+    class SendHeadersPacket extends Packet {
+      constructor(options?: object);
+    }
+    class BlockPacket extends Packet {
+      constructor(options?: object);
+    }
+    class TXPacket extends Packet {
+      constructor(options?: object);
+    }
+    class RejectPacket extends Packet {
+      constructor(options?: object);
+    }
+    class MempoolPacket extends Packet {
+      constructor(options?: object);
+    }
+    class FilterLoadPacket extends Packet {
+      constructor(options?: object);
+    }
+    class FilterAddPacket extends Packet {
+      constructor(options?: object);
+    }
+    class FilterClearPacket extends Packet {
+      constructor(options?: object);
+    }
+    class MerkleBlockPacket extends Packet {
+      constructor(options?: object);
+    }
+    class FeeFilterPacket extends Packet {
+      constructor(options?: object);
+    }
+    class SendCmpctPacket extends Packet {
+      constructor(options?: object);
+    }
+    class CmpctBlockPacket extends Packet {
+      constructor(options?: object);
+    }
+    class GetBlockTxnPacket extends Packet {
+      constructor(options?: object);
+    }
+    class BlockTxnPacket extends Packet {
+      constructor(options?: object);
+    }
+    class UnknownPacket extends Packet {
+      constructor(options?: object);
+    }
+    export namespace bip152 {
+      export class CompactBlock extends primitives.AbstractBlock {
+        keyNonce: Buffer;
+        ids: any[];
+        ptx: any[];
+        sipKey: null | any
+        now: number
+        available?: any[]
+        idMap: Map<any, any>
+        count: number
+        totalTX: number
+        constructor(options?: CompactBlockOptions);
+        verifyBody(): true
+      }
+
+      interface CompactBlockOptions {
+        keyNonce: Buffer;
+        ids: any[];
+        ptx: any[];
+        available?: any[]
+        idMap?: Map<any, any>
+        count?: number
+        totalTX?: number
+      }
+    }
+
+    export class Framer {}
+
+    export class HostList {}
+
+    export class NetAddress {}
+
+    export class Parser {}
+
     export class Peer {}
 
-    export class Pool {}
+    export class Pool extends EventEmitter {
+      opened: boolean
+      options: PoolOptions 
+    }
+
+    export namespace common {
+
+    }
   }
 
-  export type packets = net.packets;
+  export interface packets extends net.packets {}
 
-  export type Peer = net.Peer;
+  export class Peer extends net.Peer {}
 
-  export type Pool = net.Pool;
+  export class Pool extends net.Pool {}
 
   export namespace node {
     export class Node extends EventEmitter {
@@ -1424,7 +1649,7 @@ declare module 'bcoin' {
       toRaw(): Buffer;
       toNormal(): Buffer;
       toWriter(bw: BufferWriter): BufferWriter;
-      toNormalWriter(bw: BufferWriter): BufferWriter
+      toNormalWriter(bw: BufferWriter): BufferWriter;
     }
 
     export interface TXOption {
