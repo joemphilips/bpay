@@ -619,32 +619,6 @@ declare module 'bcoin' {
   export type Amount = btc.Amount;
 
   export type URI = btc.URI;
-
-  export namespace coins {
-    export class Coins {}
-
-    export class CoinEntry {}
-
-    export class CoinView extends BufferMap {
-      public map: BufferMap;
-      public undo: UndoCoins;
-      constructor();
-      ensure(hash: HashKey): Coins;
-      remove(hash: HashKey): Coins | null;
-      addTX(tx: TX, height: number): Coins;
-      removeTX(tx: TX, height: number): Coins;
-      addEntry(prevout: Outpoint, coin: CoinEntry): CoinEntry | null;
-      addCoin(coin: Coin): CoinEntry | null;
-      addOutput(prevout: Outpoint, output: Output): CoinEntry | null;
-    }
-    export class UndoCoins {}
-  }
-
-  export class Coins extends coins.Coins {}
-  export class CoinEntry extends coins.CoinEntry {}
-  export class CoinView extends coins.CoinView {}
-  export class UndoCoins extends coins.UndoCoins {}
-
   export namespace hd {
     export type HDKey = HDPrivateKey | HDPublicKey;
     type PrivateKeyJson = { xprivkey: string; [key: string]: any };
@@ -1022,238 +996,6 @@ declare module 'bcoin' {
 
   export type Miner = mining.Miner;
 
-  export namespace net {
-    export interface packets {
-      types: {
-        VERSION: 0;
-        VERACK: 1;
-        PING: 2;
-        PONG: 3;
-        GETADDR: 4;
-        ADDR: 5;
-        INV: 6;
-        GETDATA: 7;
-        NOTFOUND: 8;
-        GETBLOCKS: 9;
-        GETHEADERS: 10;
-        HEADERS: 11;
-        SENDHEADERS: 12;
-        BLOCK: 13;
-        TX: 14;
-        REJECT: 15;
-        MEMPOOL: 16;
-        FILTERLOAD: 17;
-        FILTERADD: 18;
-        FILTERCLEAR: 19;
-        MERKLEBLOCK: 20;
-        FEEFILTER: 21;
-        SENDCMPCT: 22;
-        CMPCTBLOCK: 23;
-        GETBLOCKTXN: 24;
-        BLOCKTXN: 25;
-        UNKNOWN: 26;
-        // Internal
-        INTERNAL: 27;
-        DATA: 28;
-      };
-      typesByVal: Array<string>;
-      // Packet: Packet;
-      VersionPacket: VersionPacket;
-      VerackPacket: VerackPacket;
-      PingPacket: PingPacket;
-      PongPacket: PongPacket;
-      GetAddrPacket: GetAddrPacket;
-      AddrPacket: AddrPacket;
-      InvPacket: InvPacket;
-      GetDataPacket: GetDataPacket;
-      NotFoundPacket: NotFoundPacket;
-      GetBlocksPacket: GetBlocksPacket;
-      GetHeadersPacket: GetHeadersPacket;
-      HeadersPacket: HeadersPacket;
-      SendHeadersPacket: SendHeadersPacket;
-      BlockPacket: BlockPacket;
-      TXPacket: TXPacket;
-      RejectPacket: RejectPacket;
-      MempoolPacket: MempoolPacket;
-      FilterLoadPacket: FilterLoadPacket;
-      FilterAddPacket: FilterAddPacket;
-      FilterClearPacket: FilterClearPacket;
-      MerkleBlockPacket: MerkleBlockPacket;
-      FeeFilterPacket: FeeFilterPacket;
-      SendCmpctPacket: SendCmpctPacket;
-      CmpctBlockPacket: CmpctBlockPacket;
-      GetBlockTxnPacket: GetBlocksPacket;
-      BlockTxnPacket: GetBlockTxnPacket;
-
-      fromRaw: (cmd?: PacketTypeLower, data?: Buffer) => Packet;
-    }
-
-    type PacketTypeLower =
-      | 'version'
-      | 'verack'
-      | 'ping'
-      | 'pong'
-      | 'getaddr'
-      | 'addr'
-      | 'inv'
-      | 'getdata'
-      | 'notfound'
-      | 'getblocks'
-      | 'getheaders'
-      | 'headers'
-      | 'sendheaders'
-      | 'block'
-      | 'tx'
-      | 'reject'
-      | 'mempool'
-      | 'filterload'
-      | 'filteradd'
-      | 'filterclear'
-      | 'merkleblock'
-      | 'feefilter'
-      | 'sendcmpct'
-      | 'cmpctblock'
-      | 'getblocktxn';
-
-    class Packet {
-      type: number;
-      cmd: string;
-      constructor();
-      getSize(): number;
-      roWriter(bw: BufferWriter): BufferWriter;
-      toRaw(): Buffer;
-      fromReader(): any;
-      fromRaw(data: Buffer): any;
-    }
-
-    class VersionPacket extends Packet {
-      constructor(options?: object);
-    }
-
-    class VerackPacket extends Packet {
-      constructor(options?: object);
-    }
-    class PingPacket extends Packet {
-      constructor(options?: object);
-    }
-    class PongPacket extends Packet {
-      constructor(options?: object);
-    }
-    class GetAddrPacket extends Packet {
-      constructor(options?: object);
-    }
-    class AddrPacket extends Packet {
-      constructor(options?: object);
-    }
-    class InvPacket extends Packet {
-      constructor(options?: object);
-    }
-    class GetDataPacket extends Packet {
-      constructor(options?: object);
-    }
-    class NotFoundPacket extends Packet {
-      constructor(options?: object);
-    }
-    class GetBlocksPacket extends Packet {
-      constructor(options?: object);
-    }
-    class GetHeadersPacket extends Packet {
-      constructor(options?: object);
-    }
-    class HeadersPacket extends Packet {
-      constructor(options?: object);
-    }
-    class SendHeadersPacket extends Packet {
-      constructor(options?: object);
-    }
-    class BlockPacket extends Packet {
-      constructor(options?: object);
-    }
-    class TXPacket extends Packet {
-      constructor(options?: object);
-    }
-    class RejectPacket extends Packet {
-      constructor(options?: object);
-    }
-    class MempoolPacket extends Packet {
-      constructor(options?: object);
-    }
-    class FilterLoadPacket extends Packet {
-      constructor(options?: object);
-    }
-    class FilterAddPacket extends Packet {
-      constructor(options?: object);
-    }
-    class FilterClearPacket extends Packet {
-      constructor(options?: object);
-    }
-    class MerkleBlockPacket extends Packet {
-      constructor(options?: object);
-    }
-    class FeeFilterPacket extends Packet {
-      constructor(options?: object);
-    }
-    class SendCmpctPacket extends Packet {
-      constructor(options?: object);
-    }
-    class CmpctBlockPacket extends Packet {
-      constructor(options?: object);
-    }
-    class GetBlockTxnPacket extends Packet {
-      constructor(options?: object);
-    }
-    class BlockTxnPacket extends Packet {
-      constructor(options?: object);
-    }
-    class UnknownPacket extends Packet {
-      constructor(options?: object);
-    }
-    export namespace bip152 {
-      export class CompactBlock extends primitives.AbstractBlock {
-        keyNonce: Buffer;
-        ids: any[];
-        ptx: any[];
-        sipKey: null | any
-        now: number
-        available?: any[]
-        idMap: Map<any, any>
-        count: number
-        totalTX: number
-        constructor(options?: CompactBlockOptions);
-        verifyBody(): true
-      }
-
-      interface CompactBlockOptions {
-        keyNonce: Buffer;
-        ids: any[];
-        ptx: any[];
-        available?: any[]
-        idMap?: Map<any, any>
-        count?: number
-        totalTX?: number
-      }
-    }
-
-    export class Framer {}
-
-    export class HostList {}
-
-    export class NetAddress {}
-
-    export class Parser {}
-
-    export class Peer {}
-
-    export class Pool extends EventEmitter {
-      opened: boolean
-      options: PoolOptions 
-    }
-
-    export namespace common {
-
-    }
-  }
-
   export interface packets extends net.packets {}
 
   export class Peer extends net.Peer {}
@@ -1495,10 +1237,14 @@ declare module 'bcoin' {
       static fromOptions(options: Partial<TXMetaOptions>): TXMeta;
       static fromTX(tx: TX, entry: TXMetaEntry, index: number): TXMeta;
       public inspect(): TXMetaView;
-      public format(): TXMetaView;
+      public format(view?: CoinView): TXMetaView;
       public toJSON(): TXMetaJson;
-      public getJSON(): TXMetaJson;
-      static fromJSON(json: TXMetaView & primitives.TXJson): TXMeta;
+      public getJSON(
+        network?: Network,
+        view?: CoinView,
+        chainHeight?: number
+      ): TXMetaJson;
+      static fromJSON(json: TXMetaView): TXMeta;
       getSize(): number;
       toRaw(): Buffer;
       private fromRaw(data: Buffer): TXMeta;
@@ -1601,13 +1347,20 @@ declare module 'bcoin' {
     }
     export class Input {}
 
+    /**
+     * return value of `Input.format()`
+     */
+    interface InputJson {}
+
     export class InvItem {}
 
     export class KeyRing {}
 
     export class MerkleBlock {}
 
-    export class MTX {}
+    export class MTX {
+      mutable: true;
+    }
 
     export type AddOutputOptions =
       | Address
@@ -1630,12 +1383,18 @@ declare module 'bcoin' {
 
     export class Output {}
 
+    /**
+     * result of `Output.getJSON`
+     */
+    export interface OutputJson {}
+
     export class TX {
       public version: number;
       public inputs: Input[];
       public outputs: Output[];
       public locktime: number;
-      public mutabjle: boolean;
+      public mutable: boolean;
+      private _witness: number;
       constructor(option: TXOption);
       clone(): TX;
       inject(tx: TX): TX;
@@ -1650,16 +1409,297 @@ declare module 'bcoin' {
       toNormal(): Buffer;
       toWriter(bw: BufferWriter): BufferWriter;
       toNormalWriter(bw: BufferWriter): BufferWriter;
+      private frame(): RawTX;
+      getSizes(): RawTX;
+      getVirtualSize(): number;
+      getSigopsSize(sigops: number): number;
+      getWeight(): number;
+      getSize(): number;
+      getBaseSize(): number;
+      hasWitness(): boolean;
+      signatureHash(
+        index: number,
+        prev: Script,
+        value: Amount,
+        type: script.common.hashType,
+        version: 0 | 1 // 0 for legacy, 1 for segwit
+      ): Buffer;
+      private signatureHashV0(
+        index: number,
+        prev: Script,
+        type: script.common.hashType
+      ): Buffer;
+      private hashSize(...args: any[]): number;
+      private signatureHashV1(
+        index: number,
+        prev: Script,
+        value: Amount,
+        type: script.common.hashType
+      ): Buffer;
+      public checksig(
+        index: number,
+        prev: Script,
+        value: Amount,
+        sig: Buffer,
+        key: Buffer,
+        version: number
+      ): boolean;
+      signature(
+        index: number,
+        prev: Script,
+        value: Amount,
+        key: Buffer,
+        type: script.common.hashType,
+        version: 0 | 1
+      );
+      /**
+       * Verify all transaction inputs
+       * @param view
+       * @param flags
+       */
+      check(view: CoinView, flags?: script.common.flags): void;
+      checkInput(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags
+      ): void;
+      checkAsync(
+        view: CoinView,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<void>;
+      checkInputAsync(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<void>;
+      /**
+       * Method starts from `verify` is almost same with the one with `check`
+       * Only difference is that it wont throw error.
+       */
+      verify(view: CoinView, flags?: script.common.flags): boolean;
+      verifyInput(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags
+      ): boolean;
+      verifyAsync(
+        view: CoinView,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<boolean>;
+      verifyInputAsync(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<boolean>;
+      isCoinbase(): boolean;
+      isRBF(): boolean;
+      getFee(view: CoinView): Amount;
+      getInputValue(view: CoinView): Amount;
+      getOutputValue(): Amount;
+      getInputAddress(view: CoinView): Address[];
+      getOutputAddresses(): Address[];
+      getAddresses(view?: CoinView): Address[];
+      getHashes(view: CoinView | null, enc?: 'hex'): Buffer[];
+      hasCoins(view: CoinView): boolean;
+      isFinal(height: number, time: number): boolean;
+      verifyLocktime(index: number, predicate: number): boolean;
+      verifySequence(index: number, predicate: number): boolean;
+      private getLegacySigops(): number;
+      private getScripthashSigops(view: CoinView): number;
+      private getWitnessSigops(view: CoinView): number;
+      private getSigopsCost(view: CoinView, flags: script.common.flags): number;
+      public getSigops(view: CoinView, flags?: script.common.flags): number;
+      /**
+       * score will be 0 if it is valid
+       * it will be 10 if `input.prevout` is null
+       * otherwise 100
+       * @retruns - 1. result, 2. reason why it's not sane, 3, score
+       */
+      public isSane(): [boolean, string, number];
+      /**
+       * Non-contextual checks to determine whether the transaction has all
+       * standard output script types and standard input script size with only pushdatas
+       * in the code.
+       * Will mostly verify coin and output values.
+       */
+      public isStandard(): [boolean, string, number];
+      /**
+       * if p2sh, then check redeem script has small sigops enough
+       * Otherwise, it will return true in we have coin and not unknown
+       * @param view
+       */
+      public hasStandardInputs(view: CoinView): boolean;
+      public hasStandardWitness(view: CoinView): boolean;
+      /**
+       * Perform contextual checks to verify input, output, and fee.
+       * Difference to `verityInput` is that it is contextual.
+       * Note this function is consensus critical
+       * @param view
+       * @param height
+       */
+      public verifyInputs(view: CoinView, height: number): boolean;
+      /**
+       * Perform contextual check of tx input
+       * This function is consensus critical
+       * e.g. Coinbase maturity, fee is not negative, etc.
+       * @param view
+       * @param height
+       */
+      public checkInputs(
+        view: CoinView,
+        height: number
+      ): [number, string, number];
+      /**
+       * Calculate the modified size ot the transaction.
+       * This is used in the mempool for calculating priority.
+       * @param size
+       */
+      public getModifiedSize(size?: number): number;
+      public getPriority(view: CoinView, height: number, size?: number): number;
+      /**
+       * Calculate the sum of the inputs on chain.
+       * @param view
+       */
+      public getChainValue(view: CoinView): number;
+      /**
+       * Test if priority is hight enough.
+       * Priority itself is historical thing, so likely
+       * we don't have to bother with this method.
+       * @param view
+       * @param height
+       * @param size
+       */
+      public isFree(view: CoinView, height?: number, size?: number): boolean;
+      /**
+       * Calculate minimum fee in order for the transaction to be relayable.
+       * @param size
+       * @param rate
+       */
+      public getMinFee(size?: number, rate?: Rate): Amount;
+      /**
+       * Almost exactly same with the `getMinFee`,
+       * But it will round the result to the nearest kilobyte.
+       * @param size
+       * @param rate
+       */
+      public getRoundFee(size?: number, rate?: Rate): Amount;
+      /**
+       * Calculate the transaction's fee rate.
+       * @param view
+       * @param size
+       */
+      public getRate(view: CoinView, size?: number): Rate;
+      /**
+       * get all previous outpoint hashes (i.e. txid)
+       */
+      public getPrevout(): Buffer[];
+      /**
+       * Test this transaction is included in the filter.
+       * This will update the filter according to `filter.update` field
+       * @param filter
+       */
+      public isWatched(filter: BloomFilter): boolean;
+      /**
+       * Same with txid
+       */
+      public rhash(): Buffer;
+      /**
+       * Witness hash in little endian.
+       */
+      public rwhash(): Buffer;
+      public txid(): Buffer;
+      public toInv(): InvItem;
+      /**
+       * Same with `this.format()`.
+       */
+      public inspect(): TXFormat;
+      public format(
+        view?: CoinView,
+        entry?: ChainEntry,
+        index?: number
+      ): TXFormat;
+      /**
+       * Same with `getJSON()`
+       */
+      public toJSON(): TXJsonResult;
+      public getJSON(): TXJsonResult;
+      private fromJSON(json: TXJson): TX;
+      static fromJSON(json: TXJson): TX;
+      /**
+       * Automatically detects if it is witness serialization or not.
+       */
+      static fromRaw(data: Buffer | string, enc?: 'hex'): TX;
+      /**
+       * Automatically detects if it is witness serialization or not.
+       */
+      static fromReader(br: BufferReader): TX;
+      static isTX(obj: object): boolean
     }
 
+    class RawTX {
+      data: null | Buffer;
+      size: number;
+      witness: number;
+    }
     export interface TXOption {
       version?: number;
       input?: number;
       outputs?: Output[];
       locktime?: number;
     }
+    /**
+     * result Object of tx.inspect()
+     */
+    export interface TXFormat {
+      hash: Buffer; // txid
+      witnessHash: Buffer;
+      size: number;
+      virtualSize: number;
+      value: Amount;
+      // ----- these  exists only when CoinView is present.
+      fee?: Amount;
+      rate?: Amount;
+      // ----------
 
-    export class TXJson {}
+      minFee: Amount;
+      // ----- these exists only when ChainEntry is present.
+      height?: number;
+      block?: Buffer; // block hash
+      time?: number;
+      date?: number;
+      // -----------
+      index: number;
+      version: number;
+      inputs: InputJson[];
+      outputs: Output[];
+      locktime: number;
+    }
+    /**
+     * result of tx.toJSON()
+     */
+    export type TXJsonResult = {
+      hash: Buffer;
+      witnessHash: Buffer;
+      fee?: Amount;
+      rate?: Amount;
+      mtime: number; // returns now
+      height?: number;
+      block?: Buffer;
+      time?: number;
+      date?: number;
+      hex: string;
+    } & TXJson;
+    /** value required for TX.fromJSON() */
+    export interface TXJson {
+      version: number;
+      inputs: InputJson[];
+      outputs: OutputJson[];
+      locktime: number;
+    }
   }
 
   export class Address extends primitives.Address {}
@@ -1888,402 +1928,6 @@ declare module 'bcoin' {
   export type consensus = protocol.consensus;
   export type networks = protocol.networks;
   export type policy = protocol.policy;
-  export namespace script {
-    export namespace common {
-      export type opcodes = {
-        // Push
-        OP_0: 0x00;
-
-        OP_PUSHDATA1: 0x4c;
-        OP_PUSHDATA2: 0x4d;
-        OP_PUSHDATA4: 0x4e;
-
-        OP_1NEGATE: 0x4f;
-
-        OP_RESERVED: 0x50;
-
-        OP_1: 0x51;
-        OP_2: 0x52;
-        OP_3: 0x53;
-        OP_4: 0x54;
-        OP_5: 0x55;
-        OP_6: 0x56;
-        OP_7: 0x57;
-        OP_8: 0x58;
-        OP_9: 0x59;
-        OP_10: 0x5a;
-        OP_11: 0x5b;
-        OP_12: 0x5c;
-        OP_13: 0x5d;
-        OP_14: 0x5e;
-        OP_15: 0x5f;
-        OP_16: 0x60;
-
-        // Control
-        OP_NOP: 0x61;
-        OP_VER: 0x62;
-        OP_IF: 0x63;
-        OP_NOTIF: 0x64;
-        OP_VERIF: 0x65;
-        OP_VERNOTIF: 0x66;
-        OP_ELSE: 0x67;
-        OP_ENDIF: 0x68;
-        OP_VERIFY: 0x69;
-        OP_RETURN: 0x6a;
-
-        // Stack
-        OP_TOALTSTACK: 0x6b;
-        OP_FROMALTSTACK: 0x6c;
-        OP_2DROP: 0x6d;
-        OP_2DUP: 0x6e;
-        OP_3DUP: 0x6f;
-        OP_2OVER: 0x70;
-        OP_2ROT: 0x71;
-        OP_2SWAP: 0x72;
-        OP_IFDUP: 0x73;
-        OP_DEPTH: 0x74;
-        OP_DROP: 0x75;
-        OP_DUP: 0x76;
-        OP_NIP: 0x77;
-        OP_OVER: 0x78;
-        OP_PICK: 0x79;
-        OP_ROLL: 0x7a;
-        OP_ROT: 0x7b;
-        OP_SWAP: 0x7c;
-        OP_TUCK: 0x7d;
-
-        // Splice
-        OP_CAT: 0x7e;
-        OP_SUBSTR: 0x7f;
-        OP_LEFT: 0x80;
-        OP_RIGHT: 0x81;
-        OP_SIZE: 0x82;
-
-        // Bit
-        OP_INVERT: 0x83;
-        OP_AND: 0x84;
-        OP_OR: 0x85;
-        OP_XOR: 0x86;
-        OP_EQUAL: 0x87;
-        OP_EQUALVERIFY: 0x88;
-        OP_RESERVED1: 0x89;
-        OP_RESERVED2: 0x8a;
-
-        // Numeric
-        OP_1ADD: 0x8b;
-        OP_1SUB: 0x8c;
-        OP_2MUL: 0x8d;
-        OP_2DIV: 0x8e;
-        OP_NEGATE: 0x8f;
-        OP_ABS: 0x90;
-        OP_NOT: 0x91;
-        OP_0NOTEQUAL: 0x92;
-        OP_ADD: 0x93;
-        OP_SUB: 0x94;
-        OP_MUL: 0x95;
-        OP_DIV: 0x96;
-        OP_MOD: 0x97;
-        OP_LSHIFT: 0x98;
-        OP_RSHIFT: 0x99;
-        OP_BOOLAND: 0x9a;
-        OP_BOOLOR: 0x9b;
-        OP_NUMEQUAL: 0x9c;
-        OP_NUMEQUALVERIFY: 0x9d;
-        OP_NUMNOTEQUAL: 0x9e;
-        OP_LESSTHAN: 0x9f;
-        OP_GREATERTHAN: 0xa0;
-        OP_LESSTHANOREQUAL: 0xa1;
-        OP_GREATERTHANOREQUAL: 0xa2;
-        OP_MIN: 0xa3;
-        OP_MAX: 0xa4;
-        OP_WITHIN: 0xa5;
-
-        // Crypto
-        OP_RIPEMD160: 0xa6;
-        OP_SHA1: 0xa7;
-        OP_SHA256: 0xa8;
-        OP_HASH160: 0xa9;
-        OP_HASH256: 0xaa;
-        OP_CODESEPARATOR: 0xab;
-        OP_CHECKSIG: 0xac;
-        OP_CHECKSIGVERIFY: 0xad;
-        OP_CHECKMULTISIG: 0xae;
-        OP_CHECKMULTISIGVERIFY: 0xaf;
-
-        // Expansion
-        OP_NOP1: 0xb0;
-        OP_CHECKLOCKTIMEVERIFY: 0xb1;
-        OP_CHECKSEQUENCEVERIFY: 0xb2;
-        OP_NOP4: 0xb3;
-        OP_NOP5: 0xb4;
-        OP_NOP6: 0xb5;
-        OP_NOP7: 0xb6;
-        OP_NOP8: 0xb7;
-        OP_NOP9: 0xb8;
-        OP_NOP10: 0xb9;
-
-        // Custom
-        OP_INVALIDOPCODE: 0xff;
-      };
-
-      export type opcodesByVal = {
-        0x00: 'OP_0';
-
-        0x4c: 'OP_PUSHDATA1';
-        0x4d: 'OP_PUSHDATA2';
-        0x4e: 'OP_PUSHDATA4';
-
-        0x4f: 'OP_1NEGATE';
-
-        0x50: 'OP_RESERVED';
-
-        0x51: 'OP_1';
-        0x52: 'OP_2';
-        0x53: 'OP_3';
-        0x54: 'OP_4';
-        0x55: 'OP_5';
-        0x56: 'OP_6';
-        0x57: 'OP_7';
-        0x58: 'OP_8';
-        0x59: 'OP_9';
-        0x5a: 'OP_10';
-        0x5b: 'OP_11';
-        0x5c: 'OP_12';
-        0x5d: 'OP_13';
-        0x5e: 'OP_14';
-        0x5f: 'OP_15';
-        0x60: 'OP_16';
-
-        // Control
-        0x61: 'OP_NOP';
-        0x62: 'OP_VER';
-        0x63: 'OP_IF';
-        0x64: 'OP_NOTIF';
-        0x65: 'OP_VERIF';
-        0x66: 'OP_VERNOTIF';
-        0x67: 'OP_ELSE';
-        0x68: 'OP_ENDIF';
-        0x69: 'OP_VERIFY';
-        0x6a: 'OP_RETURN';
-
-        // Stack
-        0x6b: 'OP_TOALTSTACK';
-        0x6c: 'OP_FROMALTSTACK';
-        0x6d: 'OP_2DROP';
-        0x6e: 'OP_2DUP';
-        0x6f: 'OP_3DUP';
-        0x70: 'OP_2OVER';
-        0x71: 'OP_2ROT';
-        0x72: 'OP_2SWAP';
-        0x73: 'OP_IFDUP';
-        0x74: 'OP_DEPTH';
-        0x75: 'OP_DROP';
-        0x76: 'OP_DUP';
-        0x77: 'OP_NIP';
-        0x78: 'OP_OVER';
-        0x79: 'OP_PICK';
-        0x7a: 'OP_ROLL';
-        0x7b: 'OP_ROT';
-        0x7c: 'OP_SWAP';
-        0x7d: 'OP_TUCK';
-
-        // Splice
-        0x7e: 'OP_CAT';
-        0x7f: 'OP_SUBSTR';
-        0x80: 'OP_LEFT';
-        0x81: 'OP_RIGHT';
-        0x82: 'OP_SIZE';
-
-        // Bit
-        0x83: 'OP_INVERT';
-        0x84: 'OP_AND';
-        0x85: 'OP_OR';
-        0x86: 'OP_XOR';
-        0x87: 'OP_EQUAL';
-        0x88: 'OP_EQUALVERIFY';
-        0x89: 'OP_RESERVED1';
-        0x8a: 'OP_RESERVED2';
-
-        // Numeric
-        0x8b: 'OP_1ADD';
-        0x8c: 'OP_1SUB';
-        0x8d: 'OP_2MUL';
-        0x8e: 'OP_2DIV';
-        0x8f: 'OP_NEGATE';
-        0x90: 'OP_ABS';
-        0x91: 'OP_NOT';
-        0x92: 'OP_0NOTEQUAL';
-        0x93: 'OP_ADD';
-        0x94: 'OP_SUB';
-        0x95: 'OP_MUL';
-        0x96: 'OP_DIV';
-        0x97: 'OP_MOD';
-        0x98: 'OP_LSHIFT';
-        0x99: 'OP_RSHIFT';
-        0x9a: 'OP_BOOLAND';
-        0x9b: 'OP_BOOLOR';
-        0x9c: 'OP_NUMEQUAL';
-        0x9d: 'OP_NUMEQUALVERIFY';
-        0x9e: 'OP_NUMNOTEQUAL';
-        0x9f: 'OP_LESSTHAN';
-        0xa0: 'OP_GREATERTHAN';
-        0xa1: 'OP_LESSTHANOREQUAL';
-        0xa2: 'OP_GREATERTHANOREQUAL';
-        0xa3: 'OP_MIN';
-        0xa4: 'OP_MAX';
-        0xa5: 'OP_WITHIN';
-
-        // Crypto
-        0xa6: 'OP_RIPEMD160';
-        0xa7: 'OP_SHA1';
-        0xa8: 'OP_SHA256';
-        0xa9: 'OP_HASH160';
-        0xaa: 'OP_HASH256';
-        0xab: 'OP_CODESEPARATOR';
-        0xac: 'OP_CHECKSIG';
-        0xad: 'OP_CHECKSIGVERIFY';
-        0xae: 'OP_CHECKMULTISIG';
-        0xaf: 'OP_CHECKMULTISIGVERIFY';
-
-        // Expansion
-        0xb0: 'OP_NOP1';
-        0xb1: 'OP_CHECKLOCKTIMEVERIFY';
-        0xb2: 'OP_CHECKSEQUENCEVERIFY';
-        0xb3: 'OP_NOP4';
-        0xb4: 'OP_NOP5';
-        0xb5: 'OP_NOP6';
-        0xb6: 'OP_NOP7';
-        0xb7: 'OP_NOP8';
-        0xb8: 'OP_NOP9';
-        0xb9: 'OP_NOP10';
-
-        // Custom
-        0xff: 'OP_INVALIDOPCODE';
-      };
-
-      export enum flags {
-        VERIFY_NONE = 0,
-        VERIFY_P2SH = 1,
-        VERIFY_STRICTENC = 2,
-        VERIFY_DERSIG = 4,
-        VERIFY_LOW_S = 8,
-        VERIFY_NULLDUMMY = 16,
-        VERIFY_SIGPUSHONLY = 32,
-        VERIFY_MINIMALDATA = 64,
-        VERIFY_DISCOURAGE_UPGRADABLE_NOPS = 128,
-        VERIFY_CLEANSTACK = 256,
-        VERIFY_CHECKLOCKTIMEVERIFY = 512,
-        VERIFY_CHECKSEQUENCEVERIFY = 1024,
-        VERIFY_WITNESS = 2048,
-        VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM = 4096,
-        VERIFY_MINIMALIF = 8192,
-        VERIFY_NULLFAIL = 16384,
-        VERIFY_WITNESS_PUBKEYTYPE = 32768,
-        /**
-         * Consensus verify flags ... used for block validation.
-         */
-        MANDATORY_VERIFY_FLAGS = 1,
-        /**
-         * Used for mempool validation.
-         */
-        STANDARD_VERIFY_FLAGS = 65503,
-        /**
-         * `STANDARD_VERIFY_FLAGS & ~MANDATORY_VERIFY_FLAGS`
-        /**
-         */
-        ONLY_STANDARD_VERIFY_FLAGS = 65502
-      }
-
-      export enum hashType {
-        ALL = 1,
-        NONE = 2,
-        SINGLE = 3,
-        ANYONECANPAY = 0x08
-      }
-
-      export type hashTypeByVal = {
-        1: 'ALL';
-        2: 'NONE';
-        3: 'SINGLE';
-        0x80: 'ANYONECANPAY';
-      };
-
-      /**
-       * output script types
-       */
-      export type types = {
-        NONSTANDARD: 0;
-        PUBKEY: 1;
-        PUBKEYHASH: 2;
-        SCRIPTHASH: 3;
-        MULTISIG: 4;
-        NULLDATA: 5;
-        WITNESSMALFORMED: 0x80;
-        WITNESSSCRIPTHASH: 0x81;
-        WITNESSPUBKEYHASH: 0x82;
-      };
-
-      export type typesByVal = {
-        0: 'NONSTANDARD';
-        1: 'PUBKEY';
-        2: 'PUBKEYHASH';
-        3: 'SCRIPTHASH';
-        4: 'MULTISIG';
-        5: 'NULLDATA';
-        0x80: 'WITNESSMALFORMED';
-        0x81: 'WITNESSSCRIPTHASH';
-        0x82: 'WITNESSPUBKEYHASH';
-      };
-
-      export type typesByValLower =
-        | 'nonstandard'
-        | 'pubkey'
-        | 'pubkeyhash'
-        | 'scripthash'
-        | 'multisig'
-        | 'nulldata'
-        | 'witnessmalformed'
-        | 'witnessscripthash'
-        | 'witnesspubkeyhash';
-
-      /**
-       * check a signature is it holds valid sighash type or not.
-       */
-      export type isHashType = (sig: Buffer) => boolean;
-      export type isLowDER = (sig: Buffer) => boolean;
-      export type isKeyEncoding = (key: Buffer) => boolean;
-      export type isCompressedEncoding = (key: Buffer) => boolean;
-      export type isSignatureEncoding = (sig: Buffer) => boolean;
-    }
-    export class Opcode {
-      constructor(value?: number, data?: Buffer);
-      isMinimal(): boolean;
-    }
-
-    export class Program {}
-
-    export class Script {}
-
-    export class ScriptNum {}
-
-    export class SigCache {}
-
-    export class Stack {}
-
-    export class Witness {}
-  }
-
-  export type Opcode = script.Opcode;
-
-  export type Program = script.Program;
-
-  export type Script = script.Script;
-  export type ScriptNum = script.ScriptNum;
-
-  export type SigCache = script.SigCache;
-  export type Stack = script.Stack;
-  export type Witness = script.Witness;
-
   export namespace utils {
     export interface util {}
   }
