@@ -226,7 +226,22 @@ declare module 'bcoin' {
 
     export class NetAddress {}
 
-    export class Parser {}
+    export class Parser extends EventEmitter {
+      network: Network;
+      pending: Buffer[];
+      total: number;
+      waiting: number;
+      header?: Header;
+      constructor(network: Network | NetworkType);
+    }
+    /**
+     * network packet header.
+     */
+    class Header {
+      cmd: Buffer;
+      size: number;
+      checksum: Buffer;
+    }
 
     export class Peer {}
 
