@@ -619,32 +619,6 @@ declare module 'bcoin' {
   export type Amount = btc.Amount;
 
   export type URI = btc.URI;
-
-  export namespace coins {
-    export class Coins {}
-
-    export class CoinEntry {}
-
-    export class CoinView extends BufferMap {
-      public map: BufferMap;
-      public undo: UndoCoins;
-      constructor();
-      ensure(hash: HashKey): Coins;
-      remove(hash: HashKey): Coins | null;
-      addTX(tx: TX, height: number): Coins;
-      removeTX(tx: TX, height: number): Coins;
-      addEntry(prevout: Outpoint, coin: CoinEntry): CoinEntry | null;
-      addCoin(coin: Coin): CoinEntry | null;
-      addOutput(prevout: Outpoint, output: Output): CoinEntry | null;
-    }
-    export class UndoCoins {}
-  }
-
-  export class Coins extends coins.Coins {}
-  export class CoinEntry extends coins.CoinEntry {}
-  export class CoinView extends coins.CoinView {}
-  export class UndoCoins extends coins.UndoCoins {}
-
   export namespace hd {
     export type HDKey = HDPrivateKey | HDPublicKey;
     type PrivateKeyJson = { xprivkey: string; [key: string]: any };
@@ -1230,7 +1204,6 @@ declare module 'bcoin' {
       public isWitnessScripthash(): boolean;
       public isUnknown(): boolean;
 
-
       static getHash(
         data: string | Address | Buffer,
         enc?: string,
@@ -1264,10 +1237,14 @@ declare module 'bcoin' {
       static fromOptions(options: Partial<TXMetaOptions>): TXMeta;
       static fromTX(tx: TX, entry: TXMetaEntry, index: number): TXMeta;
       public inspect(): TXMetaView;
-      public format(): TXMetaView;
+      public format(view?: CoinView): TXMetaView;
       public toJSON(): TXMetaJson;
-      public getJSON(): TXMetaJson;
-      static fromJSON(json: TXMetaView & primitives.TXJson): TXMeta;
+      public getJSON(
+        network?: Network,
+        view?: CoinView,
+        chainHeight?: number
+      ): TXMetaJson;
+      static fromJSON(json: TXMetaView): TXMeta;
       getSize(): number;
       toRaw(): Buffer;
       private fromRaw(data: Buffer): TXMeta;
@@ -1370,13 +1347,20 @@ declare module 'bcoin' {
     }
     export class Input {}
 
+    /**
+     * return value of `Input.format()`
+     */
+    interface InputJson {}
+
     export class InvItem {}
 
     export class KeyRing {}
 
     export class MerkleBlock {}
 
-    export class MTX {}
+    export class MTX {
+      mutable: true;
+    }
 
     export type AddOutputOptions =
       | Address
@@ -1399,12 +1383,18 @@ declare module 'bcoin' {
 
     export class Output {}
 
+    /**
+     * result of `Output.getJSON`
+     */
+    export interface OutputJson {}
+
     export class TX {
       public version: number;
       public inputs: Input[];
       public outputs: Output[];
       public locktime: number;
-      public mutabjle: boolean;
+      public mutable: boolean;
+      private _witness: number;
       constructor(option: TXOption);
       clone(): TX;
       inject(tx: TX): TX;
@@ -1419,16 +1409,297 @@ declare module 'bcoin' {
       toNormal(): Buffer;
       toWriter(bw: BufferWriter): BufferWriter;
       toNormalWriter(bw: BufferWriter): BufferWriter;
+      private frame(): RawTX;
+      getSizes(): RawTX;
+      getVirtualSize(): number;
+      getSigopsSize(sigops: number): number;
+      getWeight(): number;
+      getSize(): number;
+      getBaseSize(): number;
+      hasWitness(): boolean;
+      signatureHash(
+        index: number,
+        prev: Script,
+        value: Amount,
+        type: script.common.hashType,
+        version: 0 | 1 // 0 for legacy, 1 for segwit
+      ): Buffer;
+      private signatureHashV0(
+        index: number,
+        prev: Script,
+        type: script.common.hashType
+      ): Buffer;
+      private hashSize(...args: any[]): number;
+      private signatureHashV1(
+        index: number,
+        prev: Script,
+        value: Amount,
+        type: script.common.hashType
+      ): Buffer;
+      public checksig(
+        index: number,
+        prev: Script,
+        value: Amount,
+        sig: Buffer,
+        key: Buffer,
+        version: number
+      ): boolean;
+      signature(
+        index: number,
+        prev: Script,
+        value: Amount,
+        key: Buffer,
+        type: script.common.hashType,
+        version: 0 | 1
+      );
+      /**
+       * Verify all transaction inputs
+       * @param view
+       * @param flags
+       */
+      check(view: CoinView, flags?: script.common.flags): void;
+      checkInput(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags
+      ): void;
+      checkAsync(
+        view: CoinView,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<void>;
+      checkInputAsync(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<void>;
+      /**
+       * Method starts from `verify` is almost same with the one with `check`
+       * Only difference is that it wont throw error.
+       */
+      verify(view: CoinView, flags?: script.common.flags): boolean;
+      verifyInput(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags
+      ): boolean;
+      verifyAsync(
+        view: CoinView,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<boolean>;
+      verifyInputAsync(
+        index: number,
+        coin: Coin | Output,
+        flags?: script.common.flags,
+        pool?: WorkerPool
+      ): Promise<boolean>;
+      isCoinbase(): boolean;
+      isRBF(): boolean;
+      getFee(view: CoinView): Amount;
+      getInputValue(view: CoinView): Amount;
+      getOutputValue(): Amount;
+      getInputAddress(view: CoinView): Address[];
+      getOutputAddresses(): Address[];
+      getAddresses(view?: CoinView): Address[];
+      getHashes(view: CoinView | null, enc?: 'hex'): Buffer[];
+      hasCoins(view: CoinView): boolean;
+      isFinal(height: number, time: number): boolean;
+      verifyLocktime(index: number, predicate: number): boolean;
+      verifySequence(index: number, predicate: number): boolean;
+      private getLegacySigops(): number;
+      private getScripthashSigops(view: CoinView): number;
+      private getWitnessSigops(view: CoinView): number;
+      private getSigopsCost(view: CoinView, flags: script.common.flags): number;
+      public getSigops(view: CoinView, flags?: script.common.flags): number;
+      /**
+       * score will be 0 if it is valid
+       * it will be 10 if `input.prevout` is null
+       * otherwise 100
+       * @retruns - 1. result, 2. reason why it's not sane, 3, score
+       */
+      public isSane(): [boolean, string, number];
+      /**
+       * Non-contextual checks to determine whether the transaction has all
+       * standard output script types and standard input script size with only pushdatas
+       * in the code.
+       * Will mostly verify coin and output values.
+       */
+      public isStandard(): [boolean, string, number];
+      /**
+       * if p2sh, then check redeem script has small sigops enough
+       * Otherwise, it will return true in we have coin and not unknown
+       * @param view
+       */
+      public hasStandardInputs(view: CoinView): boolean;
+      public hasStandardWitness(view: CoinView): boolean;
+      /**
+       * Perform contextual checks to verify input, output, and fee.
+       * Difference to `verityInput` is that it is contextual.
+       * Note this function is consensus critical
+       * @param view
+       * @param height
+       */
+      public verifyInputs(view: CoinView, height: number): boolean;
+      /**
+       * Perform contextual check of tx input
+       * This function is consensus critical
+       * e.g. Coinbase maturity, fee is not negative, etc.
+       * @param view
+       * @param height
+       */
+      public checkInputs(
+        view: CoinView,
+        height: number
+      ): [number, string, number];
+      /**
+       * Calculate the modified size ot the transaction.
+       * This is used in the mempool for calculating priority.
+       * @param size
+       */
+      public getModifiedSize(size?: number): number;
+      public getPriority(view: CoinView, height: number, size?: number): number;
+      /**
+       * Calculate the sum of the inputs on chain.
+       * @param view
+       */
+      public getChainValue(view: CoinView): number;
+      /**
+       * Test if priority is hight enough.
+       * Priority itself is historical thing, so likely
+       * we don't have to bother with this method.
+       * @param view
+       * @param height
+       * @param size
+       */
+      public isFree(view: CoinView, height?: number, size?: number): boolean;
+      /**
+       * Calculate minimum fee in order for the transaction to be relayable.
+       * @param size
+       * @param rate
+       */
+      public getMinFee(size?: number, rate?: Rate): Amount;
+      /**
+       * Almost exactly same with the `getMinFee`,
+       * But it will round the result to the nearest kilobyte.
+       * @param size
+       * @param rate
+       */
+      public getRoundFee(size?: number, rate?: Rate): Amount;
+      /**
+       * Calculate the transaction's fee rate.
+       * @param view
+       * @param size
+       */
+      public getRate(view: CoinView, size?: number): Rate;
+      /**
+       * get all previous outpoint hashes (i.e. txid)
+       */
+      public getPrevout(): Buffer[];
+      /**
+       * Test this transaction is included in the filter.
+       * This will update the filter according to `filter.update` field
+       * @param filter
+       */
+      public isWatched(filter: BloomFilter): boolean;
+      /**
+       * Same with txid
+       */
+      public rhash(): Buffer;
+      /**
+       * Witness hash in little endian.
+       */
+      public rwhash(): Buffer;
+      public txid(): Buffer;
+      public toInv(): InvItem;
+      /**
+       * Same with `this.format()`.
+       */
+      public inspect(): TXFormat;
+      public format(
+        view?: CoinView,
+        entry?: ChainEntry,
+        index?: number
+      ): TXFormat;
+      /**
+       * Same with `getJSON()`
+       */
+      public toJSON(): TXJsonResult;
+      public getJSON(): TXJsonResult;
+      private fromJSON(json: TXJson): TX;
+      static fromJSON(json: TXJson): TX;
+      /**
+       * Automatically detects if it is witness serialization or not.
+       */
+      static fromRaw(data: Buffer | string, enc?: 'hex'): TX;
+      /**
+       * Automatically detects if it is witness serialization or not.
+       */
+      static fromReader(br: BufferReader): TX;
+      static isTX(obj: object): boolean
     }
 
+    class RawTX {
+      data: null | Buffer;
+      size: number;
+      witness: number;
+    }
     export interface TXOption {
       version?: number;
       input?: number;
       outputs?: Output[];
       locktime?: number;
     }
+    /**
+     * result Object of tx.inspect()
+     */
+    export interface TXFormat {
+      hash: Buffer; // txid
+      witnessHash: Buffer;
+      size: number;
+      virtualSize: number;
+      value: Amount;
+      // ----- these  exists only when CoinView is present.
+      fee?: Amount;
+      rate?: Amount;
+      // ----------
 
-    export class TXJson {}
+      minFee: Amount;
+      // ----- these exists only when ChainEntry is present.
+      height?: number;
+      block?: Buffer; // block hash
+      time?: number;
+      date?: number;
+      // -----------
+      index: number;
+      version: number;
+      inputs: InputJson[];
+      outputs: Output[];
+      locktime: number;
+    }
+    /**
+     * result of tx.toJSON()
+     */
+    export type TXJsonResult = {
+      hash: Buffer;
+      witnessHash: Buffer;
+      fee?: Amount;
+      rate?: Amount;
+      mtime: number; // returns now
+      height?: number;
+      block?: Buffer;
+      time?: number;
+      date?: number;
+      hex: string;
+    } & TXJson;
+    /** value required for TX.fromJSON() */
+    export interface TXJson {
+      version: number;
+      inputs: InputJson[];
+      outputs: OutputJson[];
+      locktime: number;
+    }
   }
 
   export class Address extends primitives.Address {}
