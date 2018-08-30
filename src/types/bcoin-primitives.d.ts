@@ -109,9 +109,89 @@ declare module 'bcoin' {
       toNormal(): Buffer;
       toWriter(bw: BufferWriter): BufferWriter;
       toNormalWriter(bw: BufferWriter): BufferWriter;
-      getSizes(): Buffer;
+      getSizes(): { size: number; witness: number };
+      getVirtualSize(): number;
+      getWeight(): number;
+      getSize(): number;
+      /**
+       * Size without witness
+       */
+      getBaseSize(): number;
+      hasWitness(): boolean;
+      hasTX(hash: Buffer): boolean;
+      indexOf(hash: Buffer): number;
+      createMerkleRoot(enc?: 'hex'): Buffer | null;
+      createWitnessNonce(): Buffer;
+      createCommitmentHash(enc?: 'hex'): Buffer;
+      getMerkleRoot(enc?: string): Buffer;
+      getWitnessNonce(): Buffer | null;
+      getCommitmentHash(enc?: string): Buffer | null;
+      /**
+       * same with checkBody, only difference is return value.
+       */
+      verifyBody(): boolean;
+      /**
+       * Non-contextual verification on the block.
+       * @returns - [valid, reason, score]
+       */
+      checkBody(): [boolean, string, number];
+      getCoinbaseHeight(): number;
+      /**
+       * Get the "claimed" reward by the coinbase.
+       */
+      getClaimed(): number;
+      getPrevout(): Buffer[];
+      inspect(): BlockFormat;
+      format(view?: CoinView, height?: number): BlockFormat;
+      toJSON(): BlockJSON;
+      static fromJSON(json: { txs: TXJson[]; [key: string]: any }): Block;
+      static fromReader(data: BufferReader): Block;
+      static fromRaw(data: Buffer): Block;
+      static fromRaw(data: string, enc: 'hex'): Block;
+      toMerkle(filter: BloomFilter): MerkleBlock;
+
+      toHeaders(): Headers;
+      getNormalSizes(): RawBlock;
+      getWitnessSizes(): RawBlock;
 
       verifyBody(): boolean;
+
+      static isBlock(object: any): boolean;
+    }
+
+    class RawBlock {
+      data: null;
+      size: number;
+      witness: number;
+    }
+
+    interface BlockFormat {
+      hash: string;
+      height: number;
+      size: number;
+      virtualSize: number;
+      date: number; // the date block has been created
+      version: string;
+      prevBlock: string;
+      merkleRoot: string;
+      commitmentHash?: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      txs: TXFormat[];
+    }
+
+    interface BlockJSON {
+      hash: string;
+      height: number;
+      depth: number;
+      version: number;
+      prevBlock: string;
+      merkleRoot: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      txs: TXFormat;
     }
 
     type BlockOptions = {
