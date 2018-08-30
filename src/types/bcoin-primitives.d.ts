@@ -1,5 +1,12 @@
 declare module 'bcoin' {
-  import { script, Fees, WorkerPool, CoinView } from 'bcoin';
+  import {
+    script,
+    Fees,
+    WorkerPool,
+    CoinView,
+    HDPublicKey,
+    HDPrivateKey
+  } from 'bcoin';
   import { BufferMap } from 'buffer-map';
   import { BufferWriter, BufferReader } from 'bufio';
   import { BloomFilter } from 'bfilter';
@@ -101,6 +108,8 @@ declare module 'bcoin' {
       toRaw(): Buffer;
       toNormal(): Buffer;
       toWriter(bw: BufferWriter): BufferWriter;
+      toNormalWriter(bw: BufferWriter): BufferWriter;
+      getSizes(): Buffer;
 
       verifyBody(): boolean;
     }
@@ -318,7 +327,127 @@ declare module 'bcoin' {
 
     export class InvItem {}
 
-    export class KeyRing {}
+    export class KeyRing {
+      witness: boolean;
+      nested?: boolean;
+      publicKey: Buffer;
+      privateKey?: Buffer;
+      script?: Script;
+      constructor(options?: KeyringArgs);
+      static fromScript(
+        key: Buffer,
+        script: Script,
+        compress: boolean
+      ): KeyRing;
+      static fromOptions(options: KeyringArgs): KeyRing;
+      static fromPrivate(key: Buffer, compress?: boolean): KeyRing;
+      static generate(compress?: boolean): KeyRing;
+      static fromPublic(key: Buffer): KeyRing;
+      static fromKey(key: Buffer, compress?: boolean): KeyRing;
+      static fromScript(
+        key: Buffer,
+        script: Script,
+        compress?: boolean
+      ): KeyRing;
+      /**
+       * from wif
+       * @param data
+       */
+      static fromSecret(data: string, network?: Network | NetworkType): KeyRing;
+      getPrivateKey(
+        enc?: 'hex' | 'base58' | null,
+        network?: Network | NetworkType
+      ): Buffer | string;
+      getPublicKey(enc?: 'hex'): Buffer | string;
+      /**
+       * Get redeem script
+       */
+      getScript(): Script;
+      /**
+       * Get witness program
+       * You must set this.witness = true before using it.
+       * Otherwise returns null
+       */
+      getProgram(): Buffer | null;
+      /**
+       * Get p2sh hash for pw2sh-nested-p2wsh
+       * @param enc
+       */
+      getNestedHash(enc?: 'hex'): Buffer | string;
+      getNestedAddress(
+        enc?: string,
+        network?: Network | NetworkType
+      ): Address | string;
+      /**
+       * if this.witness, than returns hash256
+       * @param enc
+       */
+      getScriptHash(enc?: 'hex'): Buffer | string;
+      private getScriptHash160(enc?: 'hex'): Buffer | string;
+      private getScriptHash256(enc?: 'hex'): Buffer | string;
+      getScriptAddress(enc?: 'base58'): Address | string;
+      getKeyHash(enc?: 'hex'): Buffer | string;
+      getKeyAddress(
+        enc?: 'hex',
+        network?: Network | NetworkType
+      ): Address | string;
+      getHash(): Buffer;
+      getHash(enc: 'hex'): Buffer | string;
+      getAddress(enc: null, network?: Network | NetworkType): Address;
+      getAddress(
+        enc: 'string' | 'base58',
+        network?: Network | NetworkType
+      ): string;
+      /**
+       * Check if hash equals to the set of the hashes which
+       * can be generated from this ring.
+       * @param hash
+       */
+      ownHash(hash: Buffer): boolean;
+      ownOutput(tx: TX, index: number): boolean;
+      ownOutput(tx: Output): boolean;
+      getRedeem(hash: Buffer): Script | null;
+      sign(msg: Buffer): Buffer;
+      verify(msg: Buffer, sig: Buffer): boolean;
+      getVersion(): number;
+      getType(): AddressTypeNum;
+      insepct(): KeyringJsonOutput;
+      toJSON(network?: Network | NetworkType): KeyringJsonOutput;
+      static fromJSON(json: KeyringJson): KeyRing;
+      getSize(): number;
+      static toWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer;
+      static fromReader(br: BufferReader): KeyRing;
+      static fromRaw(data: Buffer): KeyRing;
+    }
+
+    interface KeyringJson {
+      witness: boolean;
+      nested: boolean;
+      publicKey: string;
+      script?: string;
+    }
+
+    type KeyringJsonOutput = {
+      program: string;
+      type: AddressTypeLowerCase;
+      address: string;
+      script: string;
+    } & KeyringJson;
+
+    interface KeyringArgs {
+      privateKey?: KeyringOptions | HDPrivateKey | Buffer;
+      publicKey?: KeyringOptions | HDPublicKey | Buffer;
+    }
+
+    interface KeyringOptions {
+      witness?: boolean;
+      nested?: boolean;
+      key?: Buffer | KeyringArgs;
+      publicKey?: HDPublicKey;
+      privateKey?: HDPrivateKey;
+      script?: Script;
+    }
 
     export class MerkleBlock {}
 
@@ -331,7 +460,7 @@ declare module 'bcoin' {
       addInput(options: Input | InputOptions): Input;
       addOutpoint(outpoint: Outpoint | OutpointOptions): Input;
       addCoin(coin: Coin): Input;
-      addTX(tx: TX, index: number, height: number): Input;
+      addTX(tx: TX, index: number, height?: number): Input;
       addOutput(
         script: Address | Script | Output | OutputOptions,
         value?: number
