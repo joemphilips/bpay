@@ -2,6 +2,8 @@ import { wallet, Network, FullNode } from 'bcoin';
 import anyTest, { ExecutionContext, TestInterface } from 'ava';
 import { Plugin as Bpay } from './plugin';
 import { WalletClient, NodeClient } from 'bclient';
+import { ConfigOption } from 'bcfg';
+import Request from 'brq';
 
 const sleep = (msec: number) =>
   new Promise(resolve => setTimeout(resolve, msec));
@@ -12,11 +14,12 @@ const networkName = 'regtest';
 const network = Network.get(networkName);
 const apiKey = 'foo';
 
-const options = {
+const options: ConfigOption = {
   network: networkName,
   apiKey,
   memory: true,
-  workers: true
+  workers: true,
+  httpHost: '::'
 };
 
 const fullNode = new FullNode(options);
@@ -28,6 +31,12 @@ const bpayWalletNode = new wallet.Node({
   adminToken: ADMIN_TOKEN,
   plugins: [Bpay]
 });
+
+const commonRequestOption = {
+  method: 'GET',
+  host: '127.0.0.1',
+  port: network.walletPort
+};
 
 interface HTTPTestContext {
   [key: string]: any;
@@ -54,17 +63,21 @@ test.beforeEach(
       token: ADMIN_TOKEN
     });
     t.context.nodeClient = new NodeClient({
-      port: network.port,
+      port: network.rpcPort,
       apiKey
     });
   }
 );
 
-test('it should serve app', async (t: ExecutionContext<HTTPTestContext>) => {
-  // tslint:disable-next-line
-  console.log(fullNode.opened);
+test('Chain node should respond by info', async (t: ExecutionContext<
+  HTTPTestContext
+>) => {
   const info = await t.context.nodeClient.getInfo();
-  // tslint:disable-next-line
-  console.log(info);
-  t.pass();
+  t.is(info.network, 'regtest');
+});
+
+test('BPay should respond ', async (t: ExecutionContext<HTTPTestContext>) => {
+  const result = await Request({ ...commonRequestOption, path: '/bpay/app' });
+  const isError = result.text().match('Error');
+  t.falsy(isError, 'html response should not include Error');
 });

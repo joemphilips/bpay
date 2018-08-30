@@ -48,12 +48,13 @@ export class Plugin extends EventEmitter {
     if (this.node.http) {
       this.http.attach(Plugin.subpath, this.node.http);
     }
+    this.invoicedb.open();
     await this.http.open();
     this.logger.debug('bpay plugin opened!');
   }
 
   public async close() {
-    await this.invoicedb.close();
+    this.invoicedb.close();
     await this.http.close();
   }
 }
