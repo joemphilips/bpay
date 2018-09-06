@@ -4,6 +4,7 @@
 declare module 'bcoin' {
   import { BloomFilter } from 'bfilter';
   import { BufferWriter, BufferReader } from 'bufio';
+  import { I64 } from 'n64';
 
   export namespace script {
     export namespace common {
@@ -143,140 +144,403 @@ declare module 'bcoin' {
         OP_INVALIDOPCODE: 0xff;
       };
 
-      export type opcodesByVal = {
-        0x00: 'OP_0';
+      export type SmallNumOp =
+        | 0x52
+        | 0x53
+        | 0x54
+        | 0x55
+        | 0x56
+        | 0x57
+        | 0x58
+        | 0x59
+        | 0x5a
+        | 0x5b
+        | 0x5c
+        | 0x5d
+        | 0x5e
+        | 0x5f
+        | 0x60;
+      export type opcodeNum =
+        | 0x00
+        | 0x4c
+        | 0x4d
+        | 0x4e
+        | 0x4f
+        | 0x50
+        | 0x51
+        | 0x52
+        | 0x53
+        | 0x54
+        | 0x55
+        | 0x56
+        | 0x57
+        | 0x58
+        | 0x59
+        | 0x5a
+        | 0x5b
+        | 0x5c
+        | 0x5d
+        | 0x5e
+        | 0x5f
+        | 0x60
 
-        0x4c: 'OP_PUSHDATA1';
-        0x4d: 'OP_PUSHDATA2';
-        0x4e: 'OP_PUSHDATA4';
+        // control
+        | 0x61
+        | 0x62
+        | 0x63
+        | 0x64
+        | 0x65
+        | 0x66
+        | 0x67
+        | 0x68
+        | 0x69
+        | 0x6a
 
-        0x4f: 'OP_1NEGATE';
+        // stack
+        | 0x6b
+        | 0x6c
+        | 0x6d
+        | 0x6e
+        | 0x6f
+        | 0x70
+        | 0x71
+        | 0x72
+        | 0x73
+        | 0x74
+        | 0x75
+        | 0x76
+        | 0x77
+        | 0x78
+        | 0x79
+        | 0x7a
+        | 0x7b
+        | 0x7c
+        | 0x7d
+        | 0x7e
+        | 0x7f
+        | 0x80
+        | 0x81
+        | 0x82
+        | 0x83
+        | 0x84
+        | 0x85
+        | 0x86
+        | 0x87
+        | 0x88
+        | 0x89
+        | 0x8a
 
-        0x50: 'OP_RESERVED';
+        // arithmetic
+        | 0x8b
+        | 0x8c
+        | 0x8d
+        | 0x8e
+        | 0x8f
+        | 0x90
+        | 0x91
+        | 0x92
+        | 0x93
+        | 0x94
+        | 0x95
+        | 0x96
+        | 0x97
+        | 0x98
+        | 0x99
+        | 0x9a
+        | 0x9b
+        | 0x9c
+        | 0x9d
+        | 0x9e
+        | 0x9f
+        | 0xa0
+        | 0xa1
+        | 0xa2
+        | 0xa3
+        | 0xa4
+        | 0xa5
 
-        0x51: 'OP_1';
-        0x52: 'OP_2';
-        0x53: 'OP_3';
-        0x54: 'OP_4';
-        0x55: 'OP_5';
-        0x56: 'OP_6';
-        0x57: 'OP_7';
-        0x58: 'OP_8';
-        0x59: 'OP_9';
-        0x5a: 'OP_10';
-        0x5b: 'OP_11';
-        0x5c: 'OP_12';
-        0x5d: 'OP_13';
-        0x5e: 'OP_14';
-        0x5f: 'OP_15';
-        0x60: 'OP_16';
-
-        // Control
-        0x61: 'OP_NOP';
-        0x62: 'OP_VER';
-        0x63: 'OP_IF';
-        0x64: 'OP_NOTIF';
-        0x65: 'OP_VERIF';
-        0x66: 'OP_VERNOTIF';
-        0x67: 'OP_ELSE';
-        0x68: 'OP_ENDIF';
-        0x69: 'OP_VERIFY';
-        0x6a: 'OP_RETURN';
-
-        // Stack
-        0x6b: 'OP_TOALTSTACK';
-        0x6c: 'OP_FROMALTSTACK';
-        0x6d: 'OP_2DROP';
-        0x6e: 'OP_2DUP';
-        0x6f: 'OP_3DUP';
-        0x70: 'OP_2OVER';
-        0x71: 'OP_2ROT';
-        0x72: 'OP_2SWAP';
-        0x73: 'OP_IFDUP';
-        0x74: 'OP_DEPTH';
-        0x75: 'OP_DROP';
-        0x76: 'OP_DUP';
-        0x77: 'OP_NIP';
-        0x78: 'OP_OVER';
-        0x79: 'OP_PICK';
-        0x7a: 'OP_ROLL';
-        0x7b: 'OP_ROT';
-        0x7c: 'OP_SWAP';
-        0x7d: 'OP_TUCK';
-
-        // Splice
-        0x7e: 'OP_CAT';
-        0x7f: 'OP_SUBSTR';
-        0x80: 'OP_LEFT';
-        0x81: 'OP_RIGHT';
-        0x82: 'OP_SIZE';
-
-        // Bit
-        0x83: 'OP_INVERT';
-        0x84: 'OP_AND';
-        0x85: 'OP_OR';
-        0x86: 'OP_XOR';
-        0x87: 'OP_EQUAL';
-        0x88: 'OP_EQUALVERIFY';
-        0x89: 'OP_RESERVED1';
-        0x8a: 'OP_RESERVED2';
-
-        // Numeric
-        0x8b: 'OP_1ADD';
-        0x8c: 'OP_1SUB';
-        0x8d: 'OP_2MUL';
-        0x8e: 'OP_2DIV';
-        0x8f: 'OP_NEGATE';
-        0x90: 'OP_ABS';
-        0x91: 'OP_NOT';
-        0x92: 'OP_0NOTEQUAL';
-        0x93: 'OP_ADD';
-        0x94: 'OP_SUB';
-        0x95: 'OP_MUL';
-        0x96: 'OP_DIV';
-        0x97: 'OP_MOD';
-        0x98: 'OP_LSHIFT';
-        0x99: 'OP_RSHIFT';
-        0x9a: 'OP_BOOLAND';
-        0x9b: 'OP_BOOLOR';
-        0x9c: 'OP_NUMEQUAL';
-        0x9d: 'OP_NUMEQUALVERIFY';
-        0x9e: 'OP_NUMNOTEQUAL';
-        0x9f: 'OP_LESSTHAN';
-        0xa0: 'OP_GREATERTHAN';
-        0xa1: 'OP_LESSTHANOREQUAL';
-        0xa2: 'OP_GREATERTHANOREQUAL';
-        0xa3: 'OP_MIN';
-        0xa4: 'OP_MAX';
-        0xa5: 'OP_WITHIN';
-
-        // Crypto
-        0xa6: 'OP_RIPEMD160';
-        0xa7: 'OP_SHA1';
-        0xa8: 'OP_SHA256';
-        0xa9: 'OP_HASH160';
-        0xaa: 'OP_HASH256';
-        0xab: 'OP_CODESEPARATOR';
-        0xac: 'OP_CHECKSIG';
-        0xad: 'OP_CHECKSIGVERIFY';
-        0xae: 'OP_CHECKMULTISIG';
-        0xaf: 'OP_CHECKMULTISIGVERIFY';
+        // crypto
+        | 0xa6
+        | 0xa7
+        | 0xa8
+        | 0xa9
+        | 0xaa
+        | 0xab
+        | 0xac
+        | 0xad
+        | 0xae
+        | 0xaf
 
         // Expansion
-        0xb0: 'OP_NOP1';
-        0xb1: 'OP_CHECKLOCKTIMEVERIFY';
-        0xb2: 'OP_CHECKSEQUENCEVERIFY';
-        0xb3: 'OP_NOP4';
-        0xb4: 'OP_NOP5';
-        0xb5: 'OP_NOP6';
-        0xb6: 'OP_NOP7';
-        0xb7: 'OP_NOP8';
-        0xb8: 'OP_NOP9';
-        0xb9: 'OP_NOP10';
+        | 0xb0
+        | 0xb1
+        | 0xb2
+        | 0xb3
+        | 0xb4
+        | 0xb5
+        | 0xb6
+        | 0xb7
+        | 0xb8
+        | 0xb9
+
+        // custom
+        | 0xff;
+
+      export type opcodesByVal =
+        | 'OP_0' // 0x00
+        | 'OP_PUSHDATA1' // 0x4d
+        | 'OP_PUSHDATA2' // 0x4e
+        | 'OP_PUSHDATA4' // 0x4f
+        | 'OP_1NEGATE'
+        | 'OP_RESERVED'
+        | 'OP_1'
+        | 'OP_2'
+        | 'OP_3'
+        | 'OP_4'
+        | 'OP_5'
+        | 'OP_6'
+        | 'OP_7'
+        | 'OP_8'
+        | 'OP_9'
+        | 'OP_10'
+        | 'OP_11'
+        | 'OP_12'
+        | 'OP_13'
+        | 'OP_14'
+        | 'OP_15'
+        | 'OP_16'
+
+        // Control
+        | 'OP_NOP'
+        | 'OP_VER'
+        | 'OP_IF'
+        | 'OP_NOTIF'
+        | 'OP_VERIF'
+        | 'OP_VERNOTIF'
+        | 'OP_ELSE'
+        | 'OP_ENDIF'
+        | 'OP_VERIFY'
+        | 'OP_RETURN'
+
+        // Stack
+        | 'OP_TOALTSTACK'
+        | 'OP_FROMALTSTACK'
+        | 'OP_2DROP'
+        | 'OP_2DUP'
+        | 'OP_3DUP'
+        | 'OP_2OVER'
+        | 'OP_2ROT'
+        | 'OP_2SWAP'
+        | 'OP_IFDUP'
+        | 'OP_DEPTH'
+        | 'OP_DROP'
+        | 'OP_DUP'
+        | 'OP_NIP'
+        | 'OP_OVER'
+        | 'OP_PICK'
+        | 'OP_ROLL'
+        | 'OP_ROT'
+        | 'OP_SWAP'
+        | 'OP_TUCK'
+
+        // Slice
+        | 'OP_CAT'
+        | 'OP_SUBSTR'
+        | 'OP_LEFT'
+        | 'OP_RIGHT'
+        | 'OP_SIZE'
+        | 'OP_INVERT'
+        | 'OP_AND'
+        | 'OP_OR'
+        | 'OP_XOR'
+        | 'OP_EQUAL'
+        | 'OP_EQUALVERIFY'
+        | 'OP_RESERVED1'
+        | 'OP_RESERVED2'
+
+        // arithmetic
+        | 'OP_1ADD'
+        | 'OP_1SUB'
+        | 'OP_2MUL'
+        | 'OP_2DIV'
+        | 'OP_NEGATE'
+        | 'OP_ABS'
+        | 'OP_NOT'
+        | 'OP_0NOTEQUAL'
+        | 'OP_ADD'
+        | 'OP_SUB'
+        | 'OP_MUL'
+        | 'OP_DIV'
+        | 'OP_MOD'
+        | 'OP_LSHIFT'
+        | 'OP_RSHIFT'
+        | 'OP_BOOLAND'
+        | 'OP_BOOLOR'
+        | 'OP_NUMEQUAL'
+        | 'OP_NUMEQUALVERIFY'
+        | 'OP_NUMNOTEQUAL'
+        | 'OP_LESSTHAN'
+        | 'OP_GREATERTHAN'
+        | 'OP_LESSTHANOREQUAL'
+        | 'OP_GREATERTHANOREQUAL'
+        | 'OP_MIN'
+        | 'OP_MAX'
+        | 'OP_WITHIN'
+
+        // cryypto
+        | 'OP_RIPEMD160'
+        | 'OP_SHA1'
+        | 'OP_SHA256'
+        | 'OP_HASH160'
+        | 'OP_HASH256'
+        | 'OP_CODESEPARATOR'
+        | 'OP_CHECKSIG'
+        | 'OP_CHECKSIGVERIFY'
+        | 'OP_CHECKMULTISIG'
+        | 'OP_CHECKMULTISIGVERIFY'
+
+        // expansion
+        | 'OP_NOP1'
+        | 'OP_CHECKLOCKTIMEVERIFY'
+        | 'OP_CHECKSEQUENCEVERIFY'
+        | 'OP_NOP4'
+        | 'OP_NOP5'
+        | 'OP_NOP6'
+        | 'OP_NOP7'
+        | 'OP_NOP8'
+        | 'OP_NOP9'
+        | 'OP_NOP10'
+
+        // custom
+        | 'OP_INVALIDOPCODE';
+
+      export type opcodesByValShort =
+        | '0' // 0x00
+        | 'PUSHDATA1' // 0x4d
+        | 'PUSHDATA2' // 0x4e
+        | 'PUSHDATA4' // 0x4f
+        | '1NEGATE'
+        | 'RESERVED'
+        | '1'
+        | '2'
+        | '3'
+        | '4'
+        | '5'
+        | '6'
+        | '7'
+        | '8'
+        | '9'
+        | '10'
+        | '11'
+        | '12'
+        | '13'
+        | '14'
+        | '15'
+        | '16'
+
+        // Control
+        | 'NOP'
+        | 'VER'
+        | 'IF'
+        | 'NOTIF'
+        | 'VERIF'
+        | 'VERNOTIF'
+        | 'ELSE'
+        | 'ENDIF'
+        | 'VERIFY'
+        | 'RETURN'
+
+        // Stack
+        | 'TOALTSTACK'
+        | 'FROMALTSTACK'
+        | '2DROP'
+        | '2DUP'
+        | '3DUP'
+        | '2OVER'
+        | '2ROT'
+        | '2SWAP'
+        | 'IFDUP'
+        | 'DEPTH'
+        | 'DROP'
+        | 'DUP'
+        | 'NIP'
+        | 'OVER'
+        | 'PICK'
+        | 'ROLL'
+        | 'ROT'
+        | 'SWAP'
+        | 'TUCK'
+
+        // Slice
+        | 'CAT'
+        | 'SUBSTR'
+        | 'LEFT'
+        | 'RIGHT'
+        | 'SIZE'
+        | 'INVERT'
+        | 'AND'
+        | 'OR'
+        | 'XOR'
+        | 'EQUAL'
+        | 'EQUALVERIFY'
+        | 'RESERVED1'
+        | 'RESERVED2'
+
+        // arithmetic
+        | '1ADD'
+        | '1SUB'
+        | '2MUL'
+        | '2DIV'
+        | 'NEGATE'
+        | 'ABS'
+        | 'NOT'
+        | '0NOTEQUAL'
+        | 'ADD'
+        | 'SUB'
+        | 'MUL'
+        | 'DIV'
+        | 'MOD'
+        | 'LSHIFT'
+        | 'RSHIFT'
+        | 'BOOLAND'
+        | 'BOOLOR'
+        | 'NUMEQUAL'
+        | 'NUMEQUALVERIFY'
+        | 'NUMNOTEQUAL'
+        | 'LESSTHAN'
+        | 'GREATERTHAN'
+        | 'LESSTHANOREQUAL'
+        | 'GREATERTHANOREQUAL'
+        | 'MIN'
+        | 'MAX'
+        | 'WITHIN'
+
+        // crypto
+        | 'RIPEMD160'
+        | 'SHA1'
+        | 'SHA256'
+        | 'HASH160'
+        | 'HASH256'
+        | 'CODESEPARATOR'
+        | 'CHECKSIG'
+        | 'CHECKSIGVERIFY'
+        | 'CHECKMULTISIG'
+        | 'CHECKMULTISIGVERIFY'
+
+        // Expansion
+        | 'NOP1'
+        | 'CHECKLOCKTIMEVERIFY'
+        | 'CHECKSEQUENCEVERIFY'
+        | 'NOP4'
+        | 'NOP5'
+        | 'NOP6'
+        | 'NOP7'
+        | 'NOP8'
+        | 'NOP9'
+        | 'NOP10'
 
         // Custom
-        0xff: 'OP_INVALIDOPCODE';
-      };
+        | 'INVALIDOPCODE';
 
       export enum flags {
         VERIFY_NONE = 0,
@@ -374,7 +638,45 @@ declare module 'bcoin' {
     }
     export class Opcode {
       constructor(value?: number, data?: Buffer);
+      /**
+       * Test wheter a pushdata abides by minimaldata.
+       */
       isMinimal(): boolean;
+      isDisabled(): boolean;
+      isBranch(): boolean;
+      eauals(op: Opcode): boolean;
+      toOp(): number;
+      toData(): Buffer | null;
+      toLength(): number; // return length in byte
+      /**
+       * Convert and _cast_ opcode to data push
+       */
+      toPush(): Buffer | null;
+      toString(enc?: string): Buffer | null;
+      toSmall(): script.common.SmallNumOp;
+      toNum(minimal?: boolean, limit?: number): ScriptNum | null;
+      toInt(minimal?: boolean, limit?: number): number;
+      toBool(): boolean;
+      toSymbol(): string;
+      getSize(): number;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer;
+      toFormat(): string;
+      toASM(decode?: boolean): common.opcodesByVal | '[error]' | 'OP_UNKNOWN';
+      static fromOp(op: common.opcodeNum): Opcode;
+      static fromData(data: Buffer): Opcode;
+      static fromPush(data: Buffer): Opcode;
+      static fromString(str: common.opcodesByVal): Opcode;
+      static fromSmall(num: number): Opcode;
+      static fromNum(num: ScriptNum): Opcode;
+      static fromInt(num: number): Opcode;
+      static fromBool(value: boolean): Opcode;
+      static fromSymbol(
+        name: common.opcodesByVal | common.opcodesByValShort
+      ): Opcode;
+      static fromReader(br: BufferReader): Opcode;
+      static fromRaw(data: Buffer): Opcode;
+      static isOpcode(obj: object): boolean;
     }
 
     /**
@@ -404,7 +706,10 @@ declare module 'bcoin' {
       constructor(
         options?: Buffer | Opcode[] | { code: Opcode[]; [key: string]: any }
       );
-      static fromOptions(options: { code: Opcode[]; [key: string]: any });
+      static fromOptions(options: {
+        code: Opcode[];
+        [key: string]: any;
+      }): Script;
       values(): Iterator<Opcode>;
       entries(): Iterator<[number, Opcode]>;
       toArray(): Array<Opcode>;
@@ -418,7 +723,7 @@ declare module 'bcoin' {
       private fromItems(buffer: Buffer[]): Script;
       static fromItems(items: Buffer[]): Script;
       toStack(): Stack;
-      private fromStack(): Script;
+      fromStack(): Script;
       static fromStack(stack: Stack): Script;
       public clone(): Script;
       private inject(script: Script): Script;
@@ -439,7 +744,7 @@ declare module 'bcoin' {
        */
       compile(): Script;
       toWriter(bw: BufferWriter): BufferWriter;
-      toRaw(): Buffer | string;
+      toRaw(): Buffer;
       toJSON(): string;
       static fromJSON(json: string): Script;
       getSubscript(index: number): Script;
@@ -560,6 +865,7 @@ declare module 'bcoin' {
       pushData(op: Buffer): Script;
       unshiftData(op: Buffer): Script;
       insertData(index: number, op: Buffer): Script;
+      getLength(index: number): number;
 
       // methods for mutating with Push data.
       // Pretty much similar to modifying with data.
@@ -582,14 +888,23 @@ declare module 'bcoin' {
       unshiftString(op: string): Script;
       insertString(index: number, op: string): Script;
 
-      getNum(index: number): number | null;
-      popNum(): number | null;
-      shiftNum(): number | null;
+      getSmall(index: number): script.common.SmallNumOp | -1;
+      popSmall(): script.common.SmallNumOp | -1;
+      shiftSmall(): script.common.SmallNumOp | -1;
+      removeSmall(index: number): script.common.SmallNumOp | -1;
+      setSmall(index: number, num?: number): Script;
+      pushSmall(num: script.common.SmallNumOp): Script;
+      unshiftSmall(num: script.common.SmallNumOp): Script;
+      insertSmall(index: number, num: script.common.SmallNumOp): Script;
+
+      getNum(index: number): ScriptNum | null;
+      popNum(): ScriptNum | null;
+      shiftNum(): ScriptNum | null;
       removeNum(index: number): null;
-      setNum(index: number, op: number): Script;
-      pushNum(op: number): Script;
-      unshiftNum(op: number): Script;
-      insertNum(index: number, op: number): Script;
+      setNum(index: number, op: ScriptNum): Script;
+      pushNum(op: ScriptNum): Script;
+      unshiftNum(op: ScriptNum): Script;
+      insertNum(index: number, op: ScriptNum): Script;
 
       getInt(index: number): number | null;
       popInt(): number | null;
@@ -608,9 +923,30 @@ declare module 'bcoin' {
       pushBool(op: boolean): Script;
       unshiftBool(op: boolean): Script;
       insertBool(index: number, op: boolean): Script;
+
+      /**
+       * returns string such as `0xff` or something like `OP_PUSH`
+       * @param index
+       */
+      getSym(index: number): null | script.common.opcodesByVal | string;
+      popSym(): null | script.common.opcodesByVal | string;
+      shiftSym(): null | script.common.opcodesByVal | string;
+      removeSym(index: number): null | script.common.opcodesByVal | string;
+      setSym(
+        index: number,
+        symbol: script.common.opcodesByVal | script.common.opcodesByValShort
+      ): Script;
+      pushSym(
+        symbol: script.common.opcodesByVal | script.common.opcodesByValShort
+      ): Script;
+      unshiftSym(
+        symbol: script.common.opcodesByVal | script.common.opcodesByValShort
+      ): Script;
+      insertSym(
+        symbol: script.common.opcodesByVal | script.common.opcodesByValShort
+      ): Script;
       // ----------------------------
 
-      getLength(index: number): number;
       private fromString(code: string): Script;
       static fromString(code: string): Script;
       /**
@@ -629,27 +965,166 @@ declare module 'bcoin' {
       static fromReader(br: BufferReader): Script;
       static fromRaw(data: Buffer | string, enc?: string): Script;
       static isScript(obj: object): boolean;
+      encode(): Buffer;
+      decode(data: Buffer, minimal?: boolean, limit?: number): ScriptNum;
+      inspect(): string;
+      static isMinimal(data: Buffer): boolean;
     }
 
     export class ScriptError extends Error {}
 
-    export class ScriptNum {}
+    export class ScriptNum extends I64 {
+      constructor(
+        num?: number | string | Buffer | object,
+        base?: string | number
+      );
+      /**
+       * Cast to int32
+       */
+      getInt(): number;
+      toRaw(): Buffer;
+      private fromRaw(data: Buffer): ScriptNum;
+      static fromRaw(data: Buffer): ScriptNum;
+      static decode(data: Buffer, minimal?: boolean, limit?: number): ScriptNum;
+      static isScriptNum(obj: object): boolean;
+
+      // ----- properties from I64 and BN -----
+      // ----- re-diclaration was necessary to override function signature.
+      hi: number;
+      lo: number;
+      sign: 0 | 1;
+      static min(a: ScriptNum, b: ScriptNum): ScriptNum;
+      static max(a: ScriptNum, b: ScriptNum): ScriptNum;
+      static random(): I64;
+      static pow(num: number, exp: number): ScriptNum;
+      static shift(num: number, bits: number): ScriptNum;
+      static readLE(data: number, offset: number): ScriptNum;
+      static readBE(data: number, offset: number): ScriptNum;
+      static readRaw(data: number, offset: number): ScriptNum;
+      static readNumber(data: number): ScriptNum;
+      static fromInt(lo: number): ScriptNum;
+      static fromBits(hi: number, lo: number): ScriptNum;
+      static fromObject(obj: { hi: number; lo: number }): ScriptNum;
+      static fromString(str: string, base?: number): ScriptNum;
+      static fromLE(data: Buffer): ScriptNum;
+      static fromBE(data: Buffer): ScriptNum;
+      static fromRaw(data: Buffer): ScriptNum;
+      static isN64(obj: object): boolean;
+      static isU64(obj: object): boolean;
+      static isI64(obj: object): boolean;
+      static fromString(str: string, base?: number): ScriptNum;
+    }
 
     export class SigCache {}
 
-    export class Stack {}
+    /**
+     * Represents the stack of a Script during execution.
+     */
+    export class Stack implements Iterable<Buffer> {
+      items: Buffer[];
+      length: number;
+      constructor(items?: Buffer[]);
+      [Symbol.iterator]: () => Iterator<Buffer>;
+      inspect(): string;
+      toASM(decode?: boolean): string;
+      clone(): Stack;
+      clear(): Stack;
+      get(index: number): Buffer | null;
+      pop(): Buffer | null;
+      shift(): Buffer | null;
+      remove(index: number): Buffer | null;
+      set(index: number, item: Buffer): Stack;
+      /**
+       * @param item
+       * @returns number - stack size.
+       */
+      push(item: Buffer): number;
+      unshift(item: Buffer): number;
+      insert(index: number, item: Buffer): Stack;
+      erase(start: number, end: number): Buffer[];
+      swap(i1: number, i2: number): void;
+
+      /*
+       * Data
+       */
+      getData(index: number): Buffer | null;
+      popData(index: number): Buffer | null;
+      shiftData(): Buffer | null;
+      removeData(index: number): Buffer | null;
+      setData(index: number, data: Buffer): Stack;
+      pushData(data: Buffer): number;
+      unshiftData(data: Buffer): number;
+      insertData(index: number, data: Buffer): Stack;
+
+      /*
+       * Length
+       */
+      getLength(index: number): number;
+
+      /*
+       * String
+       */
+      getString(index: number): string | null;
+      popString(index: number): string | null;
+      shiftString(): string | null;
+      removeString(index: number): string | null;
+      setString(index: number, data: string): Stack;
+      pushString(data: string): number;
+      unshiftString(data: string): number;
+      insertString(index: number, data: string): Stack;
+
+      /*
+       * Num
+       * TODO: complete typing
+       */
+
+      /*
+       * Int
+       */
+      getInt(index: number, minimal?: boolean, limit?: number): number | null;
+      popInt(minimal?: boolean, limit?: number): number;
+      shiftInt(minimal?: boolean, limit?: number): string | null;
+      removeInt(
+        index: number,
+        minimal?: boolean,
+        limit?: number
+      ): string | null;
+      setInt(index: number, num: number): Stack;
+      pushInt(num: number): number;
+      unshiftInt(num: number): number;
+      insertInt(index: number, num: number): Stack;
+      /*
+       * Bool
+       * TODO: complete typing
+       */
+
+      static toString(item: Buffer, enc?: string): string;
+      static fromString(str: string, enc?: string): string;
+      /**
+       *
+       * @param item
+       * @param minimal - if the number is `OP_0` ~ `OP_16`
+       * @param limit - Size limit for ScriptNum
+       */
+      static toNum(item: Buffer, minimal?: boolean, limit?: number): ScriptNum;
+      static fromNum(num: ScriptNum): Buffer;
+      static fromInt(int: number): Stack;
+      static toBool(item: Buffer): boolean;
+      static fromBool(value: boolean): Stack;
+    }
 
     export class Witness {
       items: Buffer[];
       constructor(options?: Buffer[] | { items: Buffer[] });
-      static fromOptions(options: Buffer[] | { items: Buffer[] });
+      static fromOptions(options: Buffer[] | { items: Buffer[] }): Witness;
       toArray(): Buffer[];
       fromArray(): Buffer[];
       static fromArray(): Buffer[];
       toItems(): Buffer[];
-      private fromItems(items: Buffer[]);
+      fromItems(items: Buffer[]);
       static fromItems(items: Buffer[]): Witness;
       toStack(): Stack;
+      fromStack(stack: Stack): Witness;
       static fromStack(stack: Stack): Witness;
       inspect(): string;
       clone(): Witness;
