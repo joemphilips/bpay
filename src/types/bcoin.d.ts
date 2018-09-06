@@ -1,12 +1,11 @@
 // Type definitions for bcoin 1.0.2
 // Project: https://github.com/bcoin-org/bweb
-// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
+/// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 
 declare module 'bcoin' {
   import { BloomFilter, RollingFilter } from 'bfilter';
   import { BufferWriter, BufferReader } from 'bufio';
   import { BufferMap } from 'buffer-map';
-  import BN from 'bn.js';
   import AsyncEmitter from 'bevent';
   import { EventEmitter } from 'events';
   import Logger, { LoggerContext } from 'blgr';
@@ -17,6 +16,7 @@ declare module 'bcoin' {
   import Config, { ConfigOption } from 'bcfg';
   import LRU from 'blru';
 
+  // just a placeholder
   export abstract class BcoinPlugin {
     static init(node: Node): BcoinPluginInstance;
   }
@@ -42,19 +42,32 @@ declare module 'bcoin' {
    */
   type HashKey = Buffer;
   export namespace btc {
+    export type AmountUnit = 'sat' | 'ubtc' | 'bits' | 'mbtc' | 'btc';
+    /**
+     * Integral representation of monetary value.
+     */
+    export type AmountValue = number;
+    /**
+     * Wrapper for safely manipulating monetary value
+     * without floating point arithmetic.
+     */
     export class Amount {
       // raw value in satoshi.
-      value: number;
-      constructor(value?: string | number, unit?: string);
-      toValue(): Amount;
+      value: AmountValue;
+      constructor(value?: string | number, unit?: AmountUnit);
+      toValue(): AmountValue;
       /**
        * returns string by default.
        * @param num
        */
-      private toSatoshis(num?: boolean): string | Amount;
-      private toBits(num?: boolean): string | Amount;
-      private toMBTC(num?: boolean): string | Amount;
-      private toBTC(num?: boolean): string | Amount;
+      toSatoshis(num?: false): string;
+      toSatoshis(num: true): AmountValue;
+      toBits(num?: false): string;
+      toBits(num: true): AmountValue;
+      toMBTC(num?: false): string;
+      toMBTC(num: true): AmountValue;
+      toBTC(num?: false): string;
+      toBTC(num: true): AmountValue;
       /**
        * Returns string by default.
        * Returns `Amount` when specified `num`
@@ -69,7 +82,7 @@ declare module 'bcoin' {
       private fromBits(value: number | string): Amount;
       private fromMBTC(value: number | string): Amount;
       private fromBTC(value: number | string): Amount;
-      public from(unit: string, value: number | string): Amount;
+      public from(unit: AmountUnit, value: number | string): Amount;
       static fromSatoshis(value: number | string): string | Amount;
       static fromBits(value: number | string): Amount;
       static fromMBTC(value: number | string): Amount;
@@ -78,19 +91,79 @@ declare module 'bcoin' {
       inspect(): string;
       // ---- private static methods -----
       static btc(value: Amount, num?: boolean): string;
-      static value(str: string): Amount;
-      static encode(value: Amount, exp: number, num?: boolean): string | number;
+      static value(str: string): AmountValue;
+      static encode(value: Amount, exp: number): string;
+      static encode(value: Amount, exp: number, num: true): AmountValue;
       static decode(value: string | number, exp: number): Amount;
     }
 
-    export class URI {}
+    export class URI {
+      address: Address;
+      amount: AmountValue | -1;
+      label?: string;
+      message?: string;
+      request?: string;
+      constructor(options?: Partial<URI> | string);
+      static fromOptions(options?: Partial<URI> | string): URI;
+      static fromString(str: string, network?: Network | NetworkType): URI;
+      toString(): string;
+      inspect(): string;
+    }
   }
 
   export class Amount extends btc.Amount {}
 
   export class URI extends btc.URI {}
   export namespace protocol {
-    export interface consensus {}
+    export namespace consensus {
+      /**
+       * One bitcoin in satoshis.
+       */
+      export const COIN: 100000000;
+      /**
+       * Max money in satoshis.
+       */
+      export const MAX_MONEY: 2100000000000000;
+      export const BASE_REWARD: 5000000000;
+      export const HALF_REWARD: 2500000000;
+      export const MAX_BLOCK_SIZE: 1000000;
+      export const MAX_RAW_BLOCK_SIZE: 40000000;
+      export const MAX_BLOCK_WEIGHT: 40000000;
+      export const MAX_BLOCK_SIGOPS_COST: 80000;
+      export const MEDIAN_TIMESPAN: 11;
+      export const VERSION_TIP_BITS: 0x200000000;
+      export const VERSION_TOP_MASK: 0xe00000000;
+      export const COINBASE_MATURITY: 100;
+      export const WITNESS_SCALE_FACTOR: 4;
+      export const LOCKTIME_THRESHOLD: 500000000;
+      export const SEQUENCE_DISABLE_FLAG: number;
+      export const SEQUENCE_TYPE_FLAG: number;
+      export const SEQUENCE_GRANULARITY: number;
+      export const SEQUENCE_MASK: 0x0000ffff;
+      export const MAX_SCRIPT_SIZE: 10000;
+      /**
+       * Max stack size during execution.
+       */
+      export const MAX_SCRIPT_STACK: 1000;
+      export const MAX_SCRIPT_PUSH: 520;
+      export const MAX_SCRIPT_OPS: 201;
+      export const MAX_MULTISIG_PUBKEYS: 20;
+      export const BIP16_TIME: number;
+      export const ZERO_HASH: Buffer;
+      /**
+       * Convert a compact number to a big number.
+       * Used for `block.bits` -> `target` conversion.
+       * @param compact
+       */
+      export function fromCompact(compact: number): BN;
+      export function toCompact(num: BN): number;
+      export function verifyPOW(hash: Buffer, bits: number): boolean;
+      export function getReward(
+        height: number,
+        interval: number
+      ): btc.AmountValue;
+      export function hasBit(version: number, bit: number): boolean;
+    }
     export class Network {
       type: NetworkType;
       /**
@@ -160,8 +233,8 @@ declare module 'bcoin' {
         network: Network | null,
         name: string
       );
-      static fromMagic(value, network): Network;
-      static fromWIF(prefix, network): Network;
+      static fromMagic(value: number, network?: Network | NetworkType): Network;
+      static fromWIF(prefix: number, network?: Network | NetworkType): Network;
       /**
        * from xpubkey prefix
        * @param prefix
@@ -281,7 +354,7 @@ declare module 'bcoin' {
       limit: BN;
       bits: number; // compact pow limit.
       chainwork: BN;
-      targetTimespan;
+      targetTimespan: number;
       targetSpacing: number;
       retargetInterval: number;
       targetRest: boolean;
@@ -299,7 +372,6 @@ declare module 'bcoin' {
 
   export type NetworkType = 'main' | 'testnet' | 'regtest' | 'simnet';
 
-  export type consensus = protocol.consensus;
   export type networks = protocol.networks;
   export type policy = protocol.policy;
 
@@ -384,7 +456,7 @@ declare module 'bcoin' {
       abstract getSize(): number;
       abstract toWriter(): BufferWriter;
       abstract fromRaw(data: Buffer): any;
-      static fromRaw(data): any;
+      static fromRaw(data: Buffer): any;
     }
 
     class CheckPacket implements Packet {
@@ -394,7 +466,7 @@ declare module 'bcoin' {
       getSize(): number;
       toWriter(): BufferWriter;
       fromRaw(data: Buffer): CheckPacket;
-      static fromRaw(data): CheckPacket;
+      static fromRaw(data: Buffer): CheckPacket;
     }
 
     class SignPacket implements Packet {
@@ -404,7 +476,7 @@ declare module 'bcoin' {
       getSize(): number;
       toWriter(): BufferWriter;
       fromRaw(data: Buffer): SignPacket;
-      static fromRaw(data): SignPacket;
+      static fromRaw(data: Buffer): SignPacket;
     }
 
     interface WorkerPoolOptions {

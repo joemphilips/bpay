@@ -17,7 +17,7 @@ declare module 'bcoin' {
       hash: Buffer;
       constructor(options?: Partial<AddressOptions>);
       fromOptions(options: AddressOptions): Address;
-      static fromOptions(options: AddressOptions);
+      static fromOptions(options: AddressOptions): Address;
       public getHash(enc?: 'hex' | 'null'): Buffer;
       public isNull(): boolean;
       public equals(addr: Address): boolean;
@@ -103,7 +103,7 @@ declare module 'bcoin' {
       nonce: number;
       txs?: TX[];
       constructor(options?: BlockOptions);
-      static fromOptions(options: BlockOptions);
+      static fromOptions(options: BlockOptions): Block;
       refresh(all?: boolean): Block;
       toRaw(): Buffer;
       toNormal(): Buffer;
@@ -283,7 +283,7 @@ declare module 'bcoin' {
     export interface CoinOptions {
       version: number;
       height: number;
-      value: Amount;
+      value: btc.AmountValue;
       script: ScriptOptions;
       coinbase: boolean;
       hash: Buffer;
@@ -312,7 +312,7 @@ declare module 'bcoin' {
       /**
        * Serialize Block headers.
        */
-      public toHead();
+      public toHead(): Buffer;
       private fromHead(data: Buffer): any;
       public writeHead(bw: BufferWriter): any;
       public readHead(br: BufferReader): any;
@@ -321,9 +321,12 @@ declare module 'bcoin' {
       abstract verifyBody(): boolean;
       public rhash(): Buffer;
       public toInv(): InvItem;
-      Buffer;
     }
     export class Input {
+      prevout: Outpoint;
+      script: Script;
+      sequence: number;
+      witness: Witness;
       constructor(options?: InputOptions);
       static fromOptions(options: InputOptions): Input;
       clone(): Input;
@@ -338,7 +341,7 @@ declare module 'bcoin' {
        */
       getType(coin?: Coin): script.common.typesByValLower | 'coinbase';
       /**
-       * Try to get witnessscripthash in case it is p2sh-p2wsh
+       * This tries to get witness scripthash in case it is p2sh-p2wsh
        * @param coin
        */
       getRedeem(coin?: Coin): Script | null;
@@ -405,7 +408,33 @@ declare module 'bcoin' {
       coin?: CoinOptions & { address: Address | null };
     }
 
-    export class InvItem {}
+    export class InvItem {
+      static types: InvItemType;
+      static typesByVal: { [key: number]: string };
+      static WITNESS_FLAG: 1073741824;
+      type: InvItemType;
+      hash: Buffer;
+      constructor(type: InvItemType, hash: number);
+      getSize(): 36;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer;
+      static fromReader(br: BufferReader): InvItem;
+      static fromRaw(data: Buffer): InvItem;
+      isBlock(): boolean;
+      isTX(): boolean;
+      hasWitness(): boolean;
+      rhash(): string;
+    }
+
+    export enum InvItemType {
+      TX = 1,
+      BLOCK = 2,
+      FILTERED_BLOCK = 3,
+      CMPCT_BLOCK = 4,
+      WITNESS_TX = 1073741825,
+      WITNESS_BLOCK = 1073741826,
+      WITNESS_FILTERED_BLOCK = 1073741827
+    }
 
     export class KeyRing {
       witness: boolean;
@@ -429,6 +458,8 @@ declare module 'bcoin' {
         script: Script,
         compress?: boolean
       ): KeyRing;
+      getSecretSize(): number;
+      toSecret(network: Network | NetworkType): string;
       /**
        * from wif
        * @param data
@@ -473,7 +504,7 @@ declare module 'bcoin' {
       ): Address | string;
       getHash(): Buffer;
       getHash(enc: 'hex'): Buffer | string;
-      getAddress(enc: null, network?: Network | NetworkType): Address;
+      getAddress(enc?: null, network?: Network | NetworkType): Address;
       getAddress(
         enc: 'string' | 'base58',
         network?: Network | NetworkType
@@ -501,26 +532,26 @@ declare module 'bcoin' {
       static fromRaw(data: Buffer): KeyRing;
     }
 
-    interface KeyringJson {
+    export interface KeyringJson {
       witness: boolean;
       nested: boolean;
       publicKey: string;
       script?: string;
     }
 
-    type KeyringJsonOutput = {
+    export type KeyringJsonOutput = {
       program: string;
       type: AddressTypeLowerCase;
       address: string;
       script: string;
     } & KeyringJson;
 
-    interface KeyringArgs {
+    export interface KeyringArgs {
       privateKey?: KeyringOptions | HDPrivateKey | Buffer;
       publicKey?: KeyringOptions | HDPublicKey | Buffer;
     }
 
-    interface KeyringOptions {
+    export interface KeyringOptions {
       witness?: boolean;
       nested?: boolean;
       key?: Buffer | KeyringArgs;
@@ -529,10 +560,104 @@ declare module 'bcoin' {
       script?: Script;
     }
 
-    export class MerkleBlock {}
+    export class MerkleBlock extends AbstractBlock {
+      txs: TX[];
+      hashes: Buffer[];
+      flags: Buffer;
+      totalTX: number;
+      constructor(options?: MerkleBlockOptions);
+      static fromOptions(data: MerkleBlockOptions): MerkleBlock;
+      /**
+       *
+       * @param all - clear TX or not.
+       */
+      refresh(all?: boolean): null;
+      hasTX(hash: Buffer): boolean;
+      indexOf(hash: Buffer): number;
+      verifyBody(): boolean;
+      checkBody(): [boolean, string, number];
+      getTree(): PartialTree;
+      inspect(): MerkleBlockFormat;
+      format(): MerkleBlockFormat;
+      getSize(): number;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer | string;
+      static fromReader(br: BufferReader): MerkleBlock;
+      static fromRaw(): MerkleBlock;
+      toJSON(): MerkleBlockJson;
+      getJSON(
+        neteork?: Network | NetworkType,
+        view?: CoinView,
+        height?: number
+      ): MerkleBlockJson;
+      static fromJSON(json: MerkleBlockJsonArg): MerkleBlock;
+      static fromBlock(block: Block, filter: BloomFilter): MerkleBlock;
+      static fromHashes(block: Block, hashes: Buffer[]): MerkleBlock;
+      static fromMatches(block: Block, matches: number[]): MerkleBlock;
+      static isMerkleBlock(obj: object): boolean;
+    }
+    interface MerkleBlockJsonArg {
+      hashes: string[];
+      flags: string;
+      totalTX: number;
+    }
+
+    interface MerkleBlockJson {
+      hash: string;
+      height: number;
+      version: number;
+      prevBlock: string;
+      merkleRoot: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      totalTX: number;
+      hashes: string;
+      flags: string;
+    }
+
+    interface MerkleBlockFormat {
+      hash: string;
+      height: number;
+      date: number;
+      version: string;
+      prevBlock: string;
+      merkleBlock: string;
+      time: number;
+      bits: number;
+      nonce: number;
+      totalTX: number;
+      hashes: string[];
+      flags: Buffer;
+      map: BufferMap;
+      txs: number;
+    }
+
+    class PartialTree {
+      constructor(
+        root: Buffer,
+        matches: any[],
+        indexes: number[],
+        map: BufferMap
+      );
+      root: Buffer;
+      matches: any[];
+      indexes: number[];
+      map: BufferMap;
+    }
+
+    export interface MerkleBlockOptions {
+      hashes?: Buffer[];
+      flags?: Buffer;
+      totalTX?: number;
+    }
 
     export class MTX extends ITX {
-      mutable: true;
+      public version: number;
+      public inputs: Input[];
+      public outputs: Output[];
+      public locktime: number;
+      public mutable: true;
       view: CoinView;
       changeIndex: number;
       constructor(options?: TXOption & { chainIndex?: number });
@@ -542,7 +667,7 @@ declare module 'bcoin' {
       addCoin(coin: Coin): Input;
       addTX(tx: TX, index: number, height?: number): Input;
       addOutput(
-        script: Address | Script | Output | OutputOptions,
+        script: Address | Script | Output | OutputOptions | string,
         value?: number
       ): Output;
       clone<MTX>(): MTX;
@@ -557,8 +682,8 @@ declare module 'bcoin' {
        */
       verify(flags?: script.common.flags): boolean;
       verifyAsync(flags?: script.common.types): Promise<boolean>;
-      getFee(): Amount;
-      getInputValue(): Amount;
+      getFee(): btc.AmountValue;
+      getInputValue(): btc.AmountValue;
       getInputAddress(): Address[];
       getAddresses(): Address[];
       /**
@@ -654,7 +779,7 @@ declare module 'bcoin' {
        * @param index
        * @param fee
        */
-      subtractIndex(index: number, fee: Amount): void;
+      subtractIndex(index: number, fee: btc.AmountValue): void;
       /**
        * throws error when there are no fee to subtract
        * @param fee
@@ -663,7 +788,7 @@ declare module 'bcoin' {
       fund(
         coins: Coin[],
         options: CoinSelectorOption & { changeAddress: string }
-      );
+      ): Promise<CoinSelector>;
       sortMembers(): void;
       avoidFeeSniping(height: number): void;
       setLocktime(locktime: number): void;
@@ -671,13 +796,13 @@ declare module 'bcoin' {
       inspect(): TXFormat;
       format(): TXFormat;
       toJSON(): TXJsonResult;
-      private fromJSON(json: TXJson);
+      private fromJSON(json: TXJson): MTX;
       static fromJSON(json: TXJson & {}): MTX;
       static fromReader(br: BufferReader): MTX;
       static fromRaw(data: Buffer | string, enc?: string): MTX;
       toTX(): TX;
       commit(): [TX, CoinView];
-      static fromTX(tx);
+      static fromTX(tx: TX): MTX;
       static isMTX(obj: object): boolean;
     }
 
@@ -731,12 +856,6 @@ declare module 'bcoin' {
 
     export class Selector extends CoinSelector {}
 
-    export type AddOutputOptions =
-      | Address
-      | Script
-      | Output
-      | { address: Address | Script | Output; value: number };
-
     export type OutputOptions = {
       address?: string | Address;
       value?: number;
@@ -786,6 +905,7 @@ declare module 'bcoin' {
       value: number;
       script: Script;
       constructor(options?: OutputOptions);
+      static fromScript(script: Script | Address | string): Output;
       clone(): Output;
       equals(output: Output): boolean;
       /**
@@ -832,10 +952,15 @@ declare module 'bcoin' {
      * so we make a cushion here to avoid compile error.
      */
     abstract class ITX {
+      public version: number;
+      public inputs: Input[];
+      public outputs: Output[];
+      public locktime: number;
+      public mutable: boolean;
       checksig(
         index: number,
         prev: Script,
-        value: Amount,
+        value: btc.AmountValue,
         sig: Buffer,
         key: Buffer,
         version: number
@@ -843,16 +968,16 @@ declare module 'bcoin' {
       signature(
         index: number,
         prev: Script,
-        value: Amount,
+        value: btc.AmountValue,
         key: Buffer,
         type: script.common.hashType,
         version: 0 | 1
-      );
+      ): Buffer;
       isCoinbase(): boolean;
       isRBF(): boolean;
-      getFee(view: CoinView): Amount;
-      getInputValue(view: CoinView): Amount;
-      getOutputValue(): Amount;
+      getFee(view: CoinView): btc.AmountValue;
+      getInputValue(view: CoinView): btc.AmountValue;
+      getOutputValue(): btc.AmountValue;
       getInputAddress(view: CoinView): Address[];
       getOutputAddresses(): Address[];
       getAddresses(view?: CoinView): Address[];
@@ -867,8 +992,8 @@ declare module 'bcoin' {
       getPriority(view: CoinView, height: number, size?: number): number;
       getChainValue(view: CoinView): number;
       isFree(view: CoinView, height?: number, size?: number): boolean;
-      getMinFee(size?: number, rate?: Rate): Amount;
-      getRoundFee(size?: number, rate?: Rate): Amount;
+      getMinFee(size?: number, rate?: Rate): btc.AmountValue;
+      getRoundFee(size?: number, rate?: Rate): btc.AmountValue;
       getRate(view: CoinView, size?: number): Rate;
       getPrevout(): Buffer[];
       isWatched(filter: BloomFilter): boolean;
@@ -890,7 +1015,7 @@ declare module 'bcoin' {
       public checksig(
         index: number,
         prev: Script,
-        value: Amount,
+        value: btc.AmountValue,
         sig: Buffer,
         key: Buffer,
         version: number
@@ -898,11 +1023,11 @@ declare module 'bcoin' {
       signature(
         index: number,
         prev: Script,
-        value: Amount,
+        value: btc.AmountValue,
         key: Buffer,
         type: script.common.hashType,
         version: 0 | 1
-      );
+      ): Buffer;
       /**
        * Verify all transaction inputs
        * @param view
@@ -948,9 +1073,9 @@ declare module 'bcoin' {
       ): Promise<boolean>;
       isCoinbase(): boolean;
       isRBF(): boolean;
-      getFee(view: CoinView): Amount;
-      getInputValue(view: CoinView): Amount;
-      getOutputValue(): Amount;
+      getFee(view: CoinView): btc.AmountValue;
+      getInputValue(view: CoinView): btc.AmountValue;
+      getOutputValue(): btc.AmountValue;
       getInputAddress(view: CoinView): Address[];
       getOutputAddresses(): Address[];
       getAddresses(view?: CoinView): Address[];
@@ -1030,14 +1155,14 @@ declare module 'bcoin' {
        * @param size
        * @param rate
        */
-      public getMinFee(size?: number, rate?: Rate): Amount;
+      public getMinFee(size?: number, rate?: Rate): btc.AmountValue;
       /**
        * Almost exactly same with the `getMinFee`,
        * But it will round the result to the nearest kilobyte.
        * @param size
        * @param rate
        */
-      public getRoundFee(size?: number, rate?: Rate): Amount;
+      public getRoundFee(size?: number, rate?: Rate): btc.AmountValue;
       /**
        * Calculate the transaction's fee rate.
        * @param view
@@ -1114,13 +1239,13 @@ declare module 'bcoin' {
       witnessHash: Buffer;
       size: number;
       virtualSize: number;
-      value: Amount;
+      value: btc.AmountValue;
       // ----- these  exists only when CoinView is present.
-      fee?: Amount;
-      rate?: Amount;
+      fee?: btc.AmountValue;
+      rate?: btc.AmountValue;
       // ----------
 
-      minFee: Amount;
+      minFee: btc.AmountValue;
       // ----- these exists only when ChainEntry is present.
       height?: number;
       block?: Buffer; // block hash
@@ -1139,8 +1264,8 @@ declare module 'bcoin' {
     export type TXJsonResult = {
       hash: Buffer;
       witnessHash: Buffer;
-      fee?: Amount;
-      rate?: Amount;
+      fee?: btc.AmountValue;
+      rate?: btc.AmountValue;
       mtime: number; // returns now
       height?: number;
       block?: Buffer;

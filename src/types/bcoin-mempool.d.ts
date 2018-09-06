@@ -49,7 +49,7 @@ declare module 'bcoin' {
       avg: Float64Array;
       logger?: LoggerContext;
       constructor(type: string, logger?: Logger);
-      init(buckets: any[], maxConfirms: number, decay: number);
+      init(buckets: any[], maxConfirms: number, decay: number): void;
       /**
        * Clear data for the current block.
        * This will be called when new block Arrived.
@@ -128,8 +128,8 @@ declare module 'bcoin' {
        * @param fee test whether a fee should be used for calculation.
        * @param priority
        */
-      private isFeePoint(fee: Amount, priority: number): boolean;
-      private isPriPoint(fee: Amount, priority: number): boolean;
+      private isFeePoint(fee: btc.AmountValue, priority: number): boolean;
+      private isPriPoint(fee: btc.AmountValue, priority: number): boolean;
       /**
        * if it isFeePoint, then add to this.feeStats and this.map
        * @param entry
@@ -283,7 +283,7 @@ declare module 'bcoin' {
        * get the full balance of all unspents in the mempool
        * (Useful for testing)
        */
-      public getBalance(): Amount;
+      public getBalance(): btc.AmountValue;
       public getHistory(): TX[];
       private getOrphan(hash: Buffer): TX;
       hasOrphan(hash: Buffer): boolean;
@@ -313,14 +313,18 @@ declare module 'bcoin' {
         tx: TX,
         view: CoinView,
         flags: blockchain.common.lockFlags
-      );
-      public verifyFinal(tx: TX, flags: blockchain.common.lockFlags);
+      ): boolean;
+      public verifyFinal(tx: TX, flags: blockchain.common.lockFlags): boolean;
       private trackEntry(entry: MempoolEntry, view: CoinView): any;
       private untrackEntry(entry: MempoolEntry, view: CoinView): any;
       private indexEntry(entry: MempoolEntry, view: CoinView): void;
       private removeDoubleSpends(tx): void;
       public getSize(): number;
-      public prioritise(entry: MempoolEntry, pri: number, fee: Amount): void;
+      public prioritise(
+        entry: MempoolEntry,
+        pri: number,
+        fee: btc.AmountValue
+      ): void;
     }
 
     export type MempoolArgument = {

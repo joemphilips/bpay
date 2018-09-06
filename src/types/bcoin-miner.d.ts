@@ -1,3 +1,6 @@
+// Type definitions for bcoin 1.0.2
+// Project: https://github.com/bcoin-org/bcoin
+// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 declare module 'bcoin' {
   import { EventEmitter } from 'events';
   import { Network, Chain, ChainEntry, CoinView } from 'bcoin';
@@ -178,7 +181,7 @@ declare module 'bcoin' {
       left: Buffer;
       right: Buffer;
       constructor(options?: Partial<BlockTemplateOptions>);
-      static fromOptions(options: Partial<BlockTemplateOptions>);
+      static fromOptions(options: Partial<BlockTemplateOptions>): BlockTemplate;
       getWitnessHash(): Buffer;
       getWitnessScript(): Script;
       setBits(bits: number): void;
@@ -187,8 +190,8 @@ declare module 'bcoin' {
       createCoinbase(hash: Buffer): TX;
       refresh(): void;
       getRawCoinbase(nonce1: number, nonce2: number): Buffer;
-      getRoot(nonce1, nonce2): Buffer;
-      getHeader(root: Buffer, time: number, nonce: number);
+      getRoot(nonce1: number, nonce2: number): Buffer;
+      getHeader(root: Buffer, time: number, nonce: number): Buffer;
       getProof(
         nonce1: number,
         nonce2: number,
@@ -262,7 +265,7 @@ declare module 'bcoin' {
       descRate: number;
       depCount: number;
       constructor(tx: TX);
-      static fromTX(tx: TX, view: CoinView, attempt: BlockTemplate);
+      static fromTX(tx: TX, view: CoinView, attempt: BlockTemplate): BlockEntry;
     }
     class MerkleTree {
       steps: Buffer[];

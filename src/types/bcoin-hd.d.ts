@@ -39,7 +39,7 @@ declare module 'bcoin' {
       publicKey: Buffer;
       fingerPrint: number;
       constructor(options?: PrivateKeyOption);
-      fromSeed(seed: Buffer);
+      static fromSeed(seed: Buffer): HDPrivateKey;
       static fromOptions(options: PrivateKeyOption): HDPrivateKey;
       toPublic(): HDPublicKey;
     }

@@ -2,6 +2,9 @@
 // Project: https://github.com/bcoin-org/bcoin
 // Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 declare module 'bcoin' {
+  import { BufferWriter, BufferReader } from 'bufio';
+  import { BufferSet } from 'buffer-map';
+  import AsyncEmitter from 'bevent';
   import { EventEmitter } from 'events';
   import Logger, { LoggerContext } from 'blgr';
   import { DB, Bucket, Batch, DBOptions } from 'bdb';
@@ -86,7 +89,10 @@ declare module 'bcoin' {
        * @param passphrase
        * @param timeout - Default is 60
        */
-      public unlock(passphrase: Passphrase, timeout: number);
+      public unlock(
+        passphrase: Passphrase,
+        timeout: number
+      ): Promise<HDPrivateKey>;
       /**
        * Wallet id is represented as HASH160(m/44->public|magic)
        * and translated as `address` with a prefix `0x03be04
@@ -227,7 +233,11 @@ declare module 'bcoin' {
         address: Address
       ): Promise<void>;
 
-      public fund(mtx: MTX, options?: FundOptions, force?: boolean);
+      public fund(
+        mtx: MTX,
+        options?: FundOptions,
+        force?: boolean
+      ): Promise<void>;
       public getAccountByAddress(
         address: Address | string | Buffer
       ): Promise<Account>;
@@ -251,7 +261,10 @@ declare module 'bcoin' {
        * @param options
        * @param passphrase
        */
-      public send(options?: createTXOptions, passphrase?: Passphrase);
+      public send(
+        options?: createTXOptions,
+        passphrase?: Passphrase
+      ): Promise<TX>;
 
       /**
        * Intentionally double-spend by increasing fee for an existing output
@@ -330,7 +343,7 @@ declare module 'bcoin' {
 
       // -------- below are all proxy for the methods from `TXDB` ------
 
-      public getCoinView(tx): Promise<CoinView>;
+      public getCoinView(tx: TX): Promise<CoinView>;
       public getSpentView(tx: TX): Promise<CoinView>;
 
       public toDetails(wtx: records.TXRecord): Promise<Details>;
@@ -347,7 +360,7 @@ declare module 'bcoin' {
        * @param tx
        * @param block
        */
-      public add(tx: TX, block: records.BlockMeta);
+      public add(tx: TX, block: records.BlockMeta): Promise<Details>;
 
       /**
        * revert wallet state to `height`
@@ -459,16 +472,138 @@ declare module 'bcoin' {
       public static isWallet(obj: object): boolean;
     }
 
-    interface Balance {
-      toJSON(): BalanceJSON;
+    class Balance {
+      account: number;
+      tx: number;
+      coin: number;
+      unconfirmed: number;
+      confirmed: number;
+      constructor(acct?: number);
+      /**
+       * Apply delta
+       * @param balance - the balance which will be merged to `this`
+       */
+      applyTo(balance: Balance): void;
+      toRaw(): Buffer;
+      static fromRaw(acct?: number, data?: Buffer): Balance;
+      toJSON(minimal?: boolean): BalanceJSON;
+      inspect(): string;
     }
 
-    interface BalanceJSON {}
-    interface BlockRecord {}
+    interface BalanceJSON {
+      account?: number | void;
+      tx: number;
+      coin: number;
+      unconfirmed: number;
+      confirmed: number;
+    }
 
-    interface Details {}
+    class BalanceDelta {
+      wallet: Balance;
+      accounts: Map<Path, Account>;
+      constructor();
+      updated(): boolean;
+      applyTo(balance: Balance): void;
+      get(path: Path): Account;
+      tx(path: Path, value: number): void;
+      coin(path: Path, value: number): void;
+      unconfirmed(path: Path, value: number): void;
+      confirmed(path: Path, value: number): void;
+    }
 
-    interface Credit {}
+    /**
+     * Transaction Details.
+     * Much like TXMeta
+     */
+    class Details {
+      hash: Buffer;
+      tx: TX;
+      mtime: number;
+      size: number;
+      vsize: number;
+      block?: Buffer;
+      height: number;
+      time: number;
+      inputs: DetailsMember[];
+      outputs: DetailsMember[];
+      constructor(wtx: records.TXRecord, block?: records.BlockMeta);
+      setInput(i: number, path: Path, coin: Coin): void;
+      setOutput(i: number, path: Path): void;
+      getDepth(height?: number): number;
+      /**
+       * Calculate fee. Only works if wallet owns all inputs.
+       * Returns 0 otherwise.
+       */
+      getFee(): number;
+      /**
+       * Calculate fee rate
+       * @param fee
+       */
+      getRate(fee?: number): Rate;
+      toJSON(network?: NetworkType | Network): object;
+    }
+    interface DetailsJson {
+      hash: string;
+      height: number;
+      block?: string;
+      time: number;
+      mtime: number;
+      date: number;
+      mdate: number;
+      size: number;
+      virtualSize: number;
+      fee: number;
+      rate: Rate;
+      confirmations: number;
+      inputs: DetailsMemberJson[];
+      outputs: DetailsMemberJson[];
+      tx: string;
+    }
+    class DetailsMember {
+      value: number;
+      address?: string;
+      toJSON(): DetailsMemberJson;
+      getJSON(network?: NetworkType | Network): DetailsMemberJson;
+    }
+
+    interface DetailsMemberJson {
+      value: number;
+      address?: string;
+      path?: string;
+    }
+
+    class BlockRecord {
+      hash: Buffer;
+      height: number;
+      time: number;
+      constructor(hash?: Buffer, height?: number, time?: number);
+      hashes: BufferSet<Buffer>;
+      add(hash: Buffer): boolean;
+      remove(hash: Buffer): void;
+      static fromRaw(data: Buffer): BlockRecord;
+      getSize(): number;
+      toRaw(): Buffer;
+      toArray(): Buffer[];
+      toJSON(): BlockRecordJson;
+      static fromMeta(block: records.BlockMeta): BlockRecord;
+    }
+    interface BlockRecordJson {
+      hash: string;
+      height: number;
+      time: number;
+      hashes: string[];
+    }
+
+    class Credit {
+      coin: Coin;
+      own: boolean;
+      spent: boolean;
+      constructor(coin?: Coin, spent?: boolean);
+      static fromRaw(data: Buffer): Credit;
+      getSize(): number;
+      toRaw(): Buffer;
+      static fromTX(tx: TX, index: number, height: number): Credit;
+    }
 
     export interface FundOptions {
       /**
@@ -500,7 +635,7 @@ declare module 'bcoin' {
       /**
        * Use a hard fee  rather than calculating one
        */
-      hardFee: Amount;
+      hardFee: btc.AmountValue;
       /**
        * Whether to subtract the fee from existing outputs rather than adding more inputs.
        */
@@ -549,7 +684,7 @@ declare module 'bcoin' {
       public fees: Fees | null;
       public miner: Miner | null;
       public rpc: any | null;
-      constructor(options: Partial<HTTPOptions>);
+      constructor(options: Partial<HTTPOptions> & { node: wallet.Node });
     }
 
     export class HTTPOptions extends node.HTTPOptions {
@@ -559,17 +694,305 @@ declare module 'bcoin' {
     /**
      * has same API with `WalletClient` but it works for local node.
      */
-    export class NodeClient {}
+    export class NodeClient extends AsyncEmitter {
+      network: NetworkType;
+      filter?: BloomFilter;
+      opened: boolean;
+      constructor(node: node.Node);
+      private init(): void;
+      open(options?: any): Promise<void>;
+      close(): Promise<void>;
+      /**
+       * Add listener
+       */
+      bind(type: string, handler: Function): void;
+      hook(type: string, handler: Function): void;
+      getTip(): Promise<ChainEntry>;
+      getEntry(hash: Buffer): Promise<ChainEntry>;
+      send(tx: TX): Promise<TX>;
+      setFilter(filter: BloomFilter): Promise<void>;
+      addFilter(filter: BloomFilter): Promise<void>;
+      resetFilter(filter: BloomFilter): Promise<void>;
+      estimateFee(blocks?: number): Promise<Rate>;
+      getHashes(start?: number, end?: number): Promise<Buffer[]>;
+      rescan(start?: number | Buffer): Promise<void>;
+    }
 
     /**
-     * defined as `WalletClient` internally.
-     * client for wallet to communicate with the node
+     * client for a wallet to communicate with the remote node
      */
-    export class WalletClient extends bclient.NodeClient {}
+    class WalletClient extends bclient.NodeClient {}
 
     export class Client extends WalletClient {}
-    export class TXDB {}
-    export class MasterKey {}
+
+    /**
+     * db for an individual wallets to hold its own tx data
+     */
+    export class TXDB {
+      wdb: WalletDB;
+      db: DB;
+      logger: LoggerContext;
+      wid: number;
+      bucket?: Bucket;
+      wallet?: Wallet;
+      /**
+       * Keys for locked UTXO
+       */
+      locked: BufferSet<KeyRing>;
+      open(wallet: Wallet): Promise<void>;
+      getPath(output: Output): null | Path;
+      getPath(output: Output): Promise<Path>;
+      hasPath(output: Output): Promise<boolean>;
+      saveCredit(b: Batch): Promise<void>;
+      removeCredit(b: Batch, credit: Credit, path: Path): Promise<void>;
+      spendCredit(b: Batch, credit: Credit, tx: TX, index: number): void;
+      unspendCredit(b: Batch, tx: TX, index: number): void;
+      writeInput(b: Batch, tx: TX, index: number): Promise<void>;
+      removeInput(b: Batch, tx: TX, index: number): Promise<void>;
+      updateBalance(b: Batch, state: BalanceDelta): Promise<Balance>;
+      updateAccountBalance(
+        b: Batch,
+        acct: number,
+        state: BalanceDelta
+      ): Promise<Balance>;
+      getSpent(hash: Buffer, index: number): Promise<Outpoint | null>;
+      /**
+       * Test wheter a coin has been spent.
+       * @param hash
+       * @param index
+       */
+      isSpent(hash: Buffer, index: number): Promise<boolean>;
+
+      // ---- methods to tweek records.MapRecord --------
+      public addBlockMap(b: DB | Bucket | Batch, height: number): Promise<void>;
+      public removeBlockMap(
+        b: DB | Bucket | Batch,
+        height: Buffer
+      ): Promise<void>;
+
+      public addTXMap(b: DB | Bucket | Batch, hash: Buffer): Promise<void>;
+      public removeTXMap(b: Bucket, hash: Buffer): Promise<void>;
+
+      public addOutpointMap(
+        b: Batch,
+        hash: Buffer,
+        index: number
+      ): Promise<void>;
+      public removeOutpointMap(
+        b: Bucket,
+        hash: Buffer,
+        index: number
+      ): Promise<records.MapRecord>;
+      // ----------------------------
+      getBlocks(): Promise<BlockRecord[]>;
+      getBlock(height: number): Promise<null | BlockRecord>;
+      removeBlock(b: Bucket, hash: Buffer, height: number): Promise<void>;
+      spliceBlock(b: Bucket, hash: Buffer, height: number): Promise<void>;
+      add(tx: TX, block: records.BlockMeta): Promise<null | Details>;
+      private insert(
+        wtx: records.TXRecord,
+        block: records.BlockMeta
+      ): Promise<null | Details>;
+      private confirm(
+        wtx: records.TXRecord,
+        block: records.BlockMeta
+      ): Promise<Details>;
+      remove(hash: Buffer): Promise<void>;
+      private erase(
+        wtx: records.TXRecord,
+        block: records.BlockMeta
+      ): Promise<void>;
+      revert(height: number): Promise<number>;
+      disconnect(
+        wtx: records.TXRecord,
+        block: records.BlockMeta
+      ): Promise<Details>;
+      private removeConflicts(tx: TX, conf: number): Promise<boolean>;
+      lockTX(tx: TX | Outpoint): void;
+      unlockTX(tx: TX | Outpoint): void;
+      lockCoin(coin: Coin | Outpoint): void;
+      unlockCoin(coin: Coin | Outpoint): void;
+      isLocked(coin: Coin | Outpoint): void;
+      /**
+       * Filter array of coins or outpoints for only unlocked ones.
+       * @param coins
+       */
+      filterLocked(coins: Array<Coin | Outpoint>): Array<Coin | Outpoint>;
+      getLocked(): Outpoint[];
+      getAccountHistoryHashes(acct: number): Promise<Buffer[]>;
+      getHistoryHashes(acct: number): Promise<Buffer[]>;
+      /**
+       * Get hashes of all unconfirmed transactions in the database.
+       * @param acct
+       */
+      getAccountPendingHashes(acct: number): Promise<Buffer[]>;
+      getAccountOutpoints(acct: number): Promise<Outpoint[]>;
+      /**
+       * Get all coin hashes in the database.
+       * @param acct
+       */
+      getOutpoints(acct: number): Promise<Outpoint[]>;
+      getAccountHeightRangeHashes(
+        acct: number,
+        options: RangeQueryOption
+      ): Promise<Buffer[]>;
+      getHeightRangeHashes(
+        acct: number,
+        options: RangeQueryOption
+      ): Promise<Buffer[]>;
+      getHeightHashes(height: number): Promise<Buffer[]>;
+      /**
+       * Its almost the same with `getHeightRangeHashes`
+       * But `start` and `end` is timestamp. not height.
+       * @param acct
+       * @param options
+       */
+      getRangeHashes(
+        acct: number,
+        options: RangeQueryOption
+      ): Promise<Buffer[]>;
+      public getRange(acct: number, options: RangeQueryOption): Promise<TX[]>;
+      /**
+       * get last N transactions.
+       * @param acct
+       * @param limit
+       */
+      public getLast(acct: number, limit: number): Promise<TX[]>;
+      getHistory(accd: number): Promise<TX[]>;
+      getAccountHistory(acct: number): Promise<TX[]>;
+      getPending(acct: number): Promise<TX[]>;
+      getCredits(acct: number): Promise<Credit[]>;
+      getAccountCredits(acct: number): Promise<Credit[]>;
+      /**
+       * Fill a transaction with coins (all historical coins).
+       * @param tx
+       */
+      public getSpentCredits(tx: TX): Promise<Credit[]>;
+      getCoins(acct: number): Promise<Coin[]>;
+      getAccountCoins(acct: number): Promise<Coin[]>;
+      getSpentCoins(tx: TX): Promise<TX>;
+      getCoinView(tx: TX): Promise<CoinView>;
+      getSpentView(tx: TX): Promise<CoinView>;
+      getTX(hash: Buffer): Promise<records.TXRecord | null>;
+      getDetails(hash: Buffer): Promise<Details | null>;
+      toDetails(wtxs: records.TXRecord): Promise<Details[]>;
+      hasTX(hash: Buffer): Promise<boolean>;
+      getCoin(hash: Buffer, index: number): Promise<Coin>;
+      getCredit(hash: Buffer, index: number): Promise<Coin>;
+      //------ skipping several methods here...
+
+      public getBalance(acct?: number): Promise<Balance>;
+      /**
+       * Zap pending transactions older than `age`
+       * @param acct
+       * @param age
+       */
+      zap(acct: number, age: number): Promise<Buffer[]>;
+      abandon(hash: Buffer): Promise<void>;
+    }
+    interface RangeQueryOption {
+      /**
+       * Start height
+       */
+      start: number;
+      /**
+       * End height
+       */
+      end: number;
+      /**
+       * max number of records
+       */
+      limit?: number;
+      /**
+       * Reverse order.
+       */
+      reverse?: boolean;
+    }
+
+    export class MasterKey {
+      /**
+       * Key derivation salt
+       */
+      static salt: Buffer;
+      encrypted: boolean;
+      iv?: Buffer;
+      ciphertext?: Buffer;
+      key?: HDPrivateKey;
+      mnemonic: Mnemonic;
+      alg: CKDAlg;
+      n: number;
+      r: number;
+      p: number;
+      aesKey?: Buffer;
+      timer?: number;
+      until: number;
+      locker: Lock;
+      constructor(options: MasterKeyOptions);
+      static fromOptions(options: MasterKeyOptions): MasterKey;
+      unlock(
+        passphrase: string | Buffer,
+        timeout?: number
+      ): Promise<HDPrivateKey>;
+      private start(timeout?: number): void;
+      private stop(): void;
+      public derive(passwd: string | Buffer): Promise<Buffer>;
+      encipher(data?: Buffer, iv?: Buffer): Buffer;
+      decipher(data?: Buffer, iv?: Buffer): Buffer;
+      lock(): Promise<void>;
+      destroy(): Promise<void>;
+      decrypt(passphrase: Buffer | string): Promise<Buffer>;
+      keySize(): number;
+      writeKey(): Buffer;
+      readKey(): Buffer;
+      getSize(): number;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toRaw(): Buffer;
+      static fromReader(br: BufferReader): MasterKey;
+      static fromRaw(raw: Buffer): MasterKey;
+      static fromKey(key: HDPrivateKey, Mnemonic?: Mnemonic): MasterKey;
+      toJSON(network?: Network | NetworkType): MasterKeyJson;
+      inspect(network?: Network, unsafe?: boolean): MasterKeyJson;
+      static isMasterKey(obj?: object): boolean;
+    }
+
+    type MasterKeyJson = EncryptedMasterkeyJson | RawMasterKeyJSon;
+
+    interface EncryptedMasterkeyJson {
+      encrypted: true;
+      until: number;
+      iv: string;
+      ciphertext?: string;
+      algorithm: CKDAlgByValLower;
+      n: number;
+      r: number;
+      p: number;
+    }
+    interface RawMasterKeyJSon {
+      encrypted: boolean;
+      key?: hd.PrivateKeyJson;
+      mnemonic?: Mnemonic;
+    }
+
+    interface MasterKeyOptions {
+      encrypted?: boolean;
+      iv?: Buffer;
+      ciphertest?: Buffer;
+      key?: HDPrivateKey;
+      alg?: CKDAlgByValLower | CKDAlg;
+      rounds?: number;
+      n?: number;
+      r?: number;
+      p?: number;
+    }
+    /**
+     * Child Key Derivation algorithm
+     */
+    export enum CKDAlg {
+      PBKDF2 = 0,
+      SCRIPT = 1
+    }
+    export type CKDAlgByVal = 'PBKDF2' | 'SCRYPT';
+    export type CKDAlgByValLower = 'pbkdf2' | 'scrypt';
     export class Account {
       constructor(wdb: WalletDB, options: AccountOptions);
     }
@@ -589,8 +1012,74 @@ declare module 'bcoin' {
       lookahead?: number;
       accountKey?: HDPublicKey;
     }
-    export class WalletKey extends primitives.KeyRing {}
-    export class Path {}
+    export class WalletKey extends primitives.KeyRing {
+      keyType: PathType;
+      name?: string;
+      account: number;
+      branch: number;
+      index: number;
+      constructor(options?: primitives.KeyringOptions);
+      toJSON(network?: Network | NetworkType): WalletKeyJsonOutput;
+      static fromHD(
+        account: Account,
+        key: HDPrivateKey | HDPublicKey,
+        branch: number,
+        index: number
+      ): WalletKey;
+      static fromImport(account: Account, data: Buffer): WalletKey;
+      static fromRing(account: Account, ring: KeyRing): WalletKey;
+      toPath(): Path;
+      static isWalletKey(obj: object): boolean;
+    }
+
+    export type WalletKeyJsonOutput = {
+      name: string;
+      account: string;
+      branch: number;
+      index: number;
+    } & primitives.KeyringJsonOutput;
+
+    enum PathType {
+      HD = 0,
+      KEY = 1,
+      ADDRESS = 2
+    }
+
+    type PathTypeByVal = 'HD' | 'KEY' | 'ADDRESS';
+    export class Path {
+      static types: PathType;
+      static typesByVal: PathTypeByVal[];
+      keyType: PathType;
+      name: string;
+      account: Account;
+      branch: number;
+      index: number;
+      encrypted: boolean;
+      data?: Buffer;
+      type: primitives.AddressTypeNum;
+      version: number;
+      hash: Buffer;
+      constructor(options?: Partial<Path>);
+      static fromOptions(options?: Partial<Path>): Path;
+      clone(): Path;
+      static fromRaw(): Path;
+      getSize(): number;
+      static fromAddress(account: Account, address: Address): Path;
+      /**
+       * convert path object to raw bitcoinjs-lib style path.
+       */
+      toPath(): string;
+      toAddress(): Address;
+      toJSON(): PathJson;
+      inspect(): string;
+    }
+
+    export interface PathJson {
+      name: string;
+      account: Account;
+      change: boolean;
+      derivation: string;
+    }
     export class WalletDB {
       options: WalletOptions;
       network: Network;
@@ -695,7 +1184,7 @@ declare module 'bcoin' {
        */
       private getID(id: string | number): string;
       public get(id: number | string): Promise<Wallet | null>;
-      public save(b: DB | Batch, wallet: Wallet);
+      public save(b: DB | Batch, wallet: Wallet): void;
       public increment(b: Batch, wid: WID): void;
       public rename(wallet: Wallet, id: string): Promise<void>;
       public renameAccount(b: Batch | DB, account: Account, name: string): void;
@@ -782,6 +1271,7 @@ declare module 'bcoin' {
       private markState(block: records.BlockMeta): Promise<void>;
 
       // ----- MapRecord related methods ------
+      // called from `get[TX|Path|Outpoint|Block]Map`
       private getMap(key: Buffer): Promise<null | records.MapRecord>;
       private addMap(
         b: DB | Bucket | Batch,
@@ -793,32 +1283,52 @@ declare module 'bcoin' {
         key: Buffer,
         wid: WID
       ): Promise<void>;
-      private getPathMap(hash: Buffer): Promise<records.MapRecord | null>;
-      private addPathMap(
+
+      public getPathMap(hash: Buffer): Promise<records.MapRecord | null>;
+      public addPathMap(
         b: DB | Bucket | Batch,
         key: Buffer,
         wid: WID
       ): Promise<void>;
+      public removePathMap(b: Batch, hash: Buffer, wid: WID): Promise<void>;
 
-      private addTXMap(b: DB | Bucket | Batch, hash: Buffer, key: Buffer);
-      private addPathMap(
-        b: DB | Bucket | Batch,
-        hash: Buffer,
-        wid: WID
-      ): Promise<void>;
-      private addBlockMap(
+      public getBlockMap(height: Buffer): Promise<records.MapRecord | null>;
+      public addBlockMap(
         b: DB | Bucket | Batch,
         height: number,
         wid: WID
       ): Promise<void>;
-      private removeBlockMap(
+      public removeBlockMap(
         b: DB | Bucket | Batch,
         height: Buffer,
         wid: WID
       ): Promise<void>;
-      private getTXMap(hash: Buffer): Promise<null | records.MapRecord>;
-      // TODO: skipping a few of methods here ...
-      // -------------------
+
+      public getTXMap(hash: Buffer): Promise<null | records.MapRecord>;
+      public addTXMap(
+        b: DB | Bucket | Batch,
+        hash: Buffer,
+        wid: WID
+      ): Promise<void>;
+      public removeTXMap(b: Bucket, hash: Buffer, number: WID): Promise<void>;
+
+      public getOutpointMap(
+        hash: Buffer,
+        index: number
+      ): Promise<records.MapRecord>;
+      public addOutpointMap(
+        b: Batch,
+        hash: Buffer,
+        index: number,
+        wid: number
+      ): Promise<void>;
+      public removeOutpointMap(
+        b: Bucket,
+        hash: Buffer,
+        index: number,
+        wid: WID
+      ): Promise<records.MapRecord>;
+      // ----------------------------
 
       private getBlock(height: Buffer): Promise<null | records.BlockMeta>;
       public getTip(): Promise<records.BlockMeta>;
@@ -857,18 +1367,37 @@ declare module 'bcoin' {
       checkponts: boolean;
       wipeNoReally: boolean;
       constructor(options?: Partial<WalletOptions>);
-      static fromOptions(options: Partial<WalletOptions>);
+      static fromOptions(options: Partial<WalletOptions>): WalletOptions;
     }
 
     class NullClient {}
 
     export namespace records {
-      export class ChainState {}
-      export class BlockMeta {}
+      export class ChainState {
+        startHeight: number;
+        startHash: number;
+        height: number;
+        marked: boolean;
+      }
+      export class BlockMeta {
+        hash: Buffer;
+        height: number;
+        time: number;
+      }
 
-      export class TXRecord {}
+      export class TXRecord {
+        tx?: TX;
+        hash?: Buffer;
+        mtime: number;
+        height: number;
+        block?: BlockMeta;
+        index: number;
+        time: number;
+      }
 
-      export class MapRecord {}
+      export class MapRecord {
+        wids: Set<WID>;
+      }
     }
     /**
      * type emitted by walletdb

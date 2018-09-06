@@ -38,7 +38,7 @@ declare module 'bcoin' {
       private fromCoin(coin: Coin): CoinEntry;
       static fromCoin(coin: Coin): CoinEntry;
       private fromTX(tx: TX, index: number, height: number): CoinEntry;
-      static fromTX(tx: TX, index: number, height: number);
+      static fromTX(tx: TX, index: number, height: number): CoinEntry;
       getSize(): number;
       toWriter(bw: BufferWriter): BufferWriter;
       toRaw(): Buffer;

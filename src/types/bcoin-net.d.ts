@@ -1,3 +1,6 @@
+// Type definitions for bcoin 1.0.2
+// Project: https://github.com/bcoin-org/bcoin
+// Definitions by: Joe Miyamoto <joemphilips@gmail.com>
 declare module 'bcoin' {
   import { BloomFilter, RollingFilter } from 'bfilter';
   import List from 'blst';

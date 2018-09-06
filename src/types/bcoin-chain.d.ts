@@ -9,8 +9,11 @@ declare module 'bcoin' {
   import LRU from 'blru';
   import { BufferMap } from 'buffer-map';
   import { Batch, DB } from 'bdb';
-  import BN from 'bcrypto/lib/bn.js';
   import { BloomFilter } from 'bfilter';
+
+  interface BN {
+    [key: string]: any
+  }
 
   export namespace blockchain {
     export class Chain extends AsyncEmitter {
@@ -408,7 +411,7 @@ declare module 'bcoin' {
        * necessary for bip30
        * @param tx
        */
-      hasCoins(tx): Promise<boolean>;
+      hasCoins(tx: TX): Promise<boolean>;
       getCoinView(tx: TX): Promise<CoinView>;
       getSpentView(tx: TX): Promise<CoinView>;
       getUndoCoins(hash: HashKey): Promise<Coin[]>;
@@ -545,7 +548,7 @@ declare module 'bcoin' {
       chainwork: BN;
       constructor(options?: ChainEntryOptions);
       fromOptions(options: ChainEntryOptions): Promise<ChainEntry>;
-      static fromOptions(options: ChainEntryOptions, prev: ChainEntry);
+      static fromOptions(options: ChainEntryOptions, prev: ChainEntry): ChainEntry;
       getProof(): BN;
       getChainwork(prev: ChainEntry): BN;
       isGenesis(): boolean;

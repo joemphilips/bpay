@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "types": ["node"],
+    "baseUrl": "../",
+    "typeRoots": ["../"],
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
