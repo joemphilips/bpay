@@ -469,7 +469,8 @@ declare module 'bcoin' {
         enc?: 'hex' | 'base58' | null,
         network?: Network | NetworkType
       ): Buffer | string;
-      getPublicKey(enc?: 'hex'): Buffer | string;
+      getPublicKey(): Buffer;
+      getPublicKey(enc: 'hex'): string;
       /**
        * Get redeem script
        */
@@ -717,11 +718,7 @@ declare module 'bcoin' {
        * If it fails, returns `false`
        * Used from `this.template` , `this.sign`
        */
-      private scriptInput(
-        index: number,
-        coin: Coin | Output,
-        ring: KeyRing
-      ): boolean;
+      scriptInput(index: number, coin: Coin | Output, ring: KeyRing): boolean;
       /**
        * In case previous out does not require script.(i.e. P2PKH, etc.)
        * scriptInput will delegate execution to this function
@@ -741,7 +738,7 @@ declare module 'bcoin' {
        * @param ring
        * @param type
        */
-      private signInput(
+      signInput(
         index: number,
         coin: Coin | Output,
         ring: KeyRing,
