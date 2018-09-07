@@ -994,11 +994,69 @@ declare module 'bcoin' {
     export type CKDAlgByVal = 'PBKDF2' | 'SCRYPT';
     export type CKDAlgByValLower = 'pbkdf2' | 'scrypt';
     export class Account {
-      constructor(wdb: WalletDB, options: AccountOptions);
-    }
-    interface AccountOptions {
+      wdb: WalletDB;
+      network: Network;
       wid: number;
       accountIndex: number;
+      name?: string;
+      initialized: boolean;
+      witness: boolean;
+      watchOnly: boolean;
+      type: AccountType;
+      m: number;
+      n: number;
+      receiveDepth: number;
+      changeDpeth: number;
+      nestedDepth: number;
+      lookahead: number;
+      accountKey?: HDPublicKey;
+      static MAX_LOOKAHEAD: number;
+      constructor(wdb: WalletDB, options: AccountOptions);
+      inspect(): AccountFormat;
+      toJSON(balance: Balance): AccountJson;
+    }
+
+    export type AccountFormat = {
+      id: string;
+      wid: number;
+      network: NetworkType;
+    } & AccountInfo;
+
+    interface AccountInfo {
+      name: string;
+      initialized: boolean;
+      witness: boolean;
+      watchOnly: boolean;
+      type: AccountTypeValLower;
+      m: number;
+      n: number;
+      accountIndex: number;
+      receiveDepth: number;
+      nestedDepth: number;
+      lookahead: number;
+      receiveAddress?: string;
+      nestedAddress?: string;
+      accountKey: string;
+      keys: string[];
+    }
+
+    export type AccountJson = {
+      balance?: BalanceJSON;
+    } & AccountInfo;
+
+    enum AccountType {
+      PUBKEYHASH = 0,
+      MULTISIG = 1
+    }
+
+    type AccountTypesByVal = 'PUBKEYHASH' | 'MULTISIG';
+    type AccountTypeValLower = 'pubkeyhash' | 'multisig';
+
+    export interface AccountOptions {
+      wid: number;
+      id: string;
+      accountIndex: number;
+      accountKey: HDPublicKey;
       name?: string;
       initialized?: boolean;
       witness?: boolean;
@@ -1010,7 +1068,6 @@ declare module 'bcoin' {
       changeDepth?: number;
       nestedDepth?: number;
       lookahead?: number;
-      accountKey?: HDPublicKey;
     }
     export class WalletKey extends primitives.KeyRing {
       keyType: PathType;

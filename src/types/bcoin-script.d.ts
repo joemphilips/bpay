@@ -1121,7 +1121,7 @@ declare module 'bcoin' {
       fromArray(): Buffer[];
       static fromArray(): Buffer[];
       toItems(): Buffer[];
-      fromItems(items: Buffer[]);
+      fromItems(items: Buffer[]): Witness;
       static fromItems(items: Buffer[]): Witness;
       toStack(): Stack;
       fromStack(stack: Stack): Witness;
