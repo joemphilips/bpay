@@ -635,17 +635,20 @@ declare module 'bcoin' {
       /**
        * Use a hard fee  rather than calculating one
        */
-      hardFee: btc.AmountValue;
+      hardFee?: btc.AmountValue;
       /**
        * Whether to subtract the fee from existing outputs rather than adding more inputs.
        */
-      subtractFee: number | boolean;
+      subtractFee?: number | boolean;
+      maxFee?: number;
     }
 
     export type createTXOptions = FundOptions & {
-      outputs?: primitives.OutputOptions[];
+      outputs: primitives.OutputOptions[];
       sort?: boolean;
       locktime?: number;
+      depth?: number;
+      subtractIndex?: number;
     };
 
     export interface WalletArgument {
