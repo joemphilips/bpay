@@ -5,7 +5,8 @@ declare module 'bcoin' {
     WorkerPool,
     CoinView,
     HDPublicKey,
-    HDPrivateKey
+    HDPrivateKey,
+    Script
   } from 'bcoin';
   import { BufferMap } from 'buffer-map';
   import { BufferWriter, BufferReader } from 'bufio';
@@ -1017,14 +1018,40 @@ declare module 'bcoin' {
         key: Buffer,
         version: number
       ): boolean;
+      //
+      refresh(): void;
+      hash(enc: 'hex'): string;
+      hash(): Buffer;
+      witnessHash(enc: 'hex'): string;
+      witnessHash(): Buffer;
+      toRaw(): Buffer;
+      toNormal(): Buffer;
+      toWriter(bw: BufferWriter): BufferWriter;
+      toNormalWriter(bw: BufferWriter): BufferWriter;
+      getSizes(): { size: number; witness: number };
+      getVirtualSize(): number;
+      getSigopsSize(): number;
+      getWeight(): number;
+      getSize(): number;
+      getBaseSize(): number;
+      hasWitness(): boolean;
+      signatureHash(
+        index: number,
+        prev: Script,
+        value: btc.AmountValue,
+        type: script.common.hashType,
+        version: 0 | 1
+      ): Buffer;
+      //
       signature(
         index: number,
         prev: Script,
         value: btc.AmountValue,
         key: Buffer,
-        type: script.common.hashType,
+        type: number,
         version: 0 | 1
       ): Buffer;
+      hashSize(index: number, prev: Script, type: number): number;
       /**
        * Verify all transaction inputs
        * @param view

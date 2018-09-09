@@ -772,6 +772,7 @@ declare module 'bcoin' {
       public isCode(): boolean;
       static fromPubKey(key: Buffer): Script;
       static fromPubkeyhash(hash: Buffer): Script;
+      static fromScriptHash(hash: Buffer): Script;
       static fromMultisig(m: number, n: number, keys: Buffer[]): Script;
       static fromNulldata(flags: Buffer): Script;
       static fromProgram(version: number, data: Buffer): Script;

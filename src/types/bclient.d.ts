@@ -102,19 +102,19 @@ declare module 'bclient' {
      */
     open(): Promise<void>;
     close(): Promise<void>;
-    wallet(id: number, token?: string): Wallet;
+    wallet(id: string, token?: string): Wallet;
     none(): Promise<void>;
     /**
      * Same with `join`
      * @param id
      * @param token
      */
-    add(id: number, token: string): Promise<void>;
+    add(id: string, token: string): Promise<void>;
     /**
      * Join a wallet.
      * @param token
      */
-    join(id: number, token: string): Promise<void>;
+    join(id: string, token: string): Promise<void>;
     leave(id: string): Promise<void>;
     rescan(height?: number): Promise<any>;
     resend(): Promise<any>;
@@ -135,8 +135,11 @@ declare module 'bclient' {
     createTX(
       id: string,
       options: createTXOptions
-    ): Promise<primitives.TXJsonResult>;
-    send(id: string, options: { address: string; value: number }): Promise<any>;
+    ): Promise<primitives.TXJsonResult | null>;
+    send(
+      id: string,
+      options: wallet.createTXOptions
+    ): Promise<wallet.DetailsJson>;
     sign(id: string, options: object): Promise<primitives.TXJsonResult | null>;
     getInfo(id: string): Promise<any>;
     getAccounts(id: string): Promise<any>;
@@ -191,7 +194,11 @@ declare module 'bclient' {
       timeout?: number
     ): Promise<{ success: true }>;
     getKey(id: string, address?: string): Promise<wallet.WalletKeyJsonOutput>;
-    getWIF(id: string, address?: string, passphrase?: string): Promise<string>;
+    getWIF(
+      id: string,
+      address?: string,
+      passphrase?: string
+    ): Promise<{ privateKey: string }>;
     addSharedKey(
       id: string,
       account: string,
@@ -234,7 +241,8 @@ declare module 'bclient' {
     getBlock(height: number): ReturnType<WalletClient['getBlock']>;
     getCoin(hash: string, index: number): ReturnType<WalletClient['getCoin']>;
     zap(account?: string, age?: number): ReturnType<WalletClient['zap']>;
-    createTX(options?: createTXOptions): ReturnType<WalletClient['createTX']>;
+    createTX(options: createTXOptions): ReturnType<WalletClient['createTX']>;
+    send(options: wallet.createTXOptions): ReturnType<WalletClient['send']>;
     sign(
       id?: string,
       options?: { passphrase?: string; tx?: string }
